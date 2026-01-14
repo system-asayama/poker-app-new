@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Home } from './pages/Home';
 import { Game } from './pages/Game';
 import { Admin } from './pages/Admin';
+import { AdminLogin } from './pages/AdminLogin';
 
 function PrivateRoute({ component: Component, ...rest }: any) {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ function AppRoutes() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/admin-login" component={AdminLogin} />
       <Route path="/">
         {() => <PrivateRoute component={Home} />}
       </Route>
