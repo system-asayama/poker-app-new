@@ -1,5 +1,5 @@
 import { query, getClient } from '../database/db.js';
-import { createDeck, shuffleDeck, dealCards } from './deck.ts';
+import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { evaluateHand, compareHands } from './handEvaluator.js';
 import { Game, GamePlayer, GamePhase, PlayerAction, Winner, Card } from '@shared/types.js';
 
@@ -216,7 +216,7 @@ export class GameManager {
       deck = remainingDeck;
     } else if (nextPhase === 'turn' || nextPhase === 'river') {
       const { cards, remainingDeck } = dealCards(deck, 1);
-      communityCards = [...communityCards, ...cards[0]];
+      communityCards = [...communityCards, cards[0]];
       deck = remainingDeck;
     }
     
@@ -249,14 +249,14 @@ export class GameManager {
     const players = playersResult.rows.map(this.mapGamePlayer);
     
     // Evaluate hands
-    const hands = players.map(player => ({
+    const hands = players.map((player: GamePlayer) => ({
       player,
       hand: evaluateHand(player.holeCards, game.communityCards),
     }));
     
     // Find winner(s)
-    hands.sort((a, b) => compareHands(b.hand, a.hand));
-    const winners = hands.filter(h => h.hand.value === hands[0].hand.value);
+    hands.sort((a: any, b: any) => compareHands(b.hand, a.hand));
+    const winners = hands.filter((h: any) => h.hand.value === hands[0].hand.value);
     
     // Distribute pot
     const winAmount = Math.floor(game.pot / winners.length);
