@@ -18,6 +18,8 @@ export function Home() {
   const [games, setGames] = useState<Game[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [maxPlayers, setMaxPlayers] = useState(6);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [invitedEmails, setInvitedEmails] = useState('');
   const [loading, setLoading] = useState(false);
   
   useEffect(() => {
@@ -36,7 +38,11 @@ export function Home() {
   async function handleCreateGame() {
     setLoading(true);
     try {
-      const { game } = await api.createGame(maxPlayers);
+      const emailList = isPrivate && invitedEmails 
+        ? invitedEmails.split(',').map(e => e.trim()).filter(e => e)
+        : [];
+      
+      const { game } = await api.createGame(maxPlayers, isPrivate, emailList);
       setLocation(`/game/${game.id}`);
     } catch (error: any) {
       alert(error.message || 'Failed to create game');
@@ -175,6 +181,36 @@ export function Home() {
                 <span>9人</span>
               </div>
             </div>
+            
+            <div className="mb-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPrivate}
+                  onChange={(e) => setIsPrivate(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium">プライベートルーム（招待制）</span>
+              </label>
+            </div>
+            
+            {isPrivate && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">
+                  招待するユーザーのメールアドレス
+                </label>
+                <textarea
+                  value={invitedEmails}
+                  onChange={(e) => setInvitedEmails(e.target.value)}
+                  placeholder="user1@example.com, user2@example.com"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  カンマ区切りで複数のメールアドレスを入力できます
+                </p>
+              </div>
+            )}
             
             <div className="flex gap-4">
               <button

@@ -4,15 +4,15 @@ import { evaluateHand, compareHands } from './handEvaluator.js';
 import { Game, GamePlayer, GamePhase, PlayerAction, Winner, Card } from '@shared/types.js';
 
 export class GameManager {
-  async createGame(maxPlayers: number, userId: number): Promise<Game> {
+  async createGame(maxPlayers: number, userId: number, isPrivate: boolean = false, invitedEmails: string[] = []): Promise<Game> {
     const roomCode = this.generateRoomCode();
     const deck = shuffleDeck(createDeck());
     
     const result = await query(
-      `INSERT INTO games (room_code, max_players, status, current_phase, pot, community_cards, deck, dealer_position, small_blind, big_blind)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO games (room_code, max_players, status, current_phase, pot, community_cards, deck, dealer_position, small_blind, big_blind, is_private, host_id, invited_users)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [roomCode, maxPlayers, 'waiting', 'waiting', 0, JSON.stringify([]), JSON.stringify(deck), 0, 10, 20]
+      [roomCode, maxPlayers, 'waiting', 'waiting', 0, JSON.stringify([]), JSON.stringify(deck), 0, 10, 20, isPrivate, userId, JSON.stringify(invitedEmails)]
     );
     
     const game = this.mapGame(result.rows[0]);

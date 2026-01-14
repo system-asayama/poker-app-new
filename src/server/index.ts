@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { initializeDatabase } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
+import usersRoutes from './routes/users.js';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use(cookieParser());
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
+app.use('/api/users', usersRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

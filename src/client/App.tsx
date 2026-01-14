@@ -6,6 +6,7 @@ import { Home } from './pages/Home';
 import { Game } from './pages/Game';
 import { Admin } from './pages/Admin';
 import { AdminLogin } from './pages/AdminLogin';
+import { UserManagement } from './pages/UserManagement';
 
 function PrivateRoute({ component: Component, ...rest }: any) {
   const { user, loading } = useAuth();
@@ -34,6 +35,9 @@ function AppRoutes() {
       </Route>
       <Route path="/admin">
         {() => <PrivateRoute component={Admin} />}
+      </Route>
+      <Route path="/users">
+        {() => <PrivateRoute component={UserManagement} />}
       </Route>
       <Route>
         <div className="min-h-screen flex items-center justify-center">

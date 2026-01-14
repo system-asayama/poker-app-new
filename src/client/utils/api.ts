@@ -48,8 +48,8 @@ export const api = {
   getGames: () =>
     fetchAPI('/games'),
   
-  createGame: (maxPlayers: number) =>
-    fetchAPI('/games/create', { method: 'POST', body: { maxPlayers } }),
+  createGame: (maxPlayers: number, isPrivate?: boolean, invitedEmails?: string[]) =>
+    fetchAPI('/games/create', { method: 'POST', body: { maxPlayers, isPrivate, invitedEmails } }),
   
   joinGame: (gameId: number) =>
     fetchAPI(`/games/${gameId}/join`, { method: 'POST' }),
@@ -66,4 +66,14 @@ export const api = {
   // Admin
   getAdminGameState: (gameId: number) =>
     fetchAPI(`/games/${gameId}/admin`),
+  
+  // Users (Admin only)
+  get: (endpoint: string) =>
+    fetchAPI(endpoint),
+  
+  patch: (endpoint: string, body: any) =>
+    fetchAPI(endpoint, { method: 'PATCH', body }),
+  
+  delete: (endpoint: string) =>
+    fetchAPI(endpoint, { method: 'DELETE' }),
 };

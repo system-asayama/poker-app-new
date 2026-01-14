@@ -8,13 +8,13 @@ const router = express.Router();
 // Create game
 router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { maxPlayers } = req.body;
+    const { maxPlayers, isPrivate, invitedEmails } = req.body;
     
     if (!maxPlayers || maxPlayers < 2 || maxPlayers > 9) {
       return res.status(400).json({ error: 'Max players must be between 2 and 9' });
     }
     
-    const game = await gameManager.createGame(maxPlayers, req.user!.id);
+    const game = await gameManager.createGame(maxPlayers, req.user!.id, isPrivate, invitedEmails);
     res.json({ game });
   } catch (error) {
     console.error('Create game error:', error);
@@ -36,6 +36,16 @@ router.post('/:gameId/join', authenticateToken, async (req: AuthRequest, res) =>
     const game = gameResult.rows[0];
     if (game.status !== 'waiting') {
       return res.status(400).json({ error: 'Game already started' });
+    }
+    
+    // Check if private game and user is invited
+    if (game.is_private) {
+      const invitedUsers = game.invited_users || [];
+      const isInvited = invitedUsers.includes(req.user!.email) || game.host_id === req.user!.id;
+      
+      if (!isInvited) {
+        return res.status(403).json({ error: 'This is a private game. You must be invited to join.' });
+      }
     }
     
     const playersResult = await query('SELECT COUNT(*) as count FROM game_players WHERE game_id = $1', [gameId]);
