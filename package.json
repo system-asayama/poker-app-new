@@ -8,9 +8,10 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "tsx watch src/server/index.ts",
     "dev:client": "vite",
-    "build": "npm run build:client && npm run build:server",
+    "build": "npm run build:client && npm run build:server && npm run copy:sql",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
+    "copy:sql": "mkdir -p dist/server/database && cp src/server/database/schema.sql dist/server/database/",
     "start": "node dist/server/index.js",
     "migrate": "node dist/server/migrate.js",
     "test": "vitest"
