@@ -23,6 +23,41 @@ function PrivateRoute({ component: Component, ...rest }: any) {
   return user ? <Component {...rest} /> : <Redirect to="/login" />;
 }
 
+function AdminRoute({ component: Component, ...rest }: any) {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl text-gray-400">読み込み中...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Redirect to="/login" />;
+  }
+  
+  if (user.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl text-red-400 mb-4">アクセス拒否</div>
+          <div className="text-gray-400 mb-6">このページは管理者専用です</div>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="px-6 py-2 bg-poker-gold text-gray-900 rounded-lg hover:bg-yellow-500 transition-colors"
+          >
+            ホームに戻る
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return <Component {...rest} />;
+}
+
 function AppRoutes() {
   return (
     <Switch>
@@ -38,10 +73,10 @@ function AppRoutes() {
         {(params) => <PrivateRoute component={Game} params={params} />}
       </Route>
       <Route path="/admin">
-        {() => <PrivateRoute component={Admin} />}
+        {() => <AdminRoute component={Admin} />}
       </Route>
       <Route path="/users">
-        {() => <PrivateRoute component={UserManagement} />}
+        {() => <AdminRoute component={UserManagement} />}
       </Route>
       <Route>
         <div className="min-h-screen flex items-center justify-center">
