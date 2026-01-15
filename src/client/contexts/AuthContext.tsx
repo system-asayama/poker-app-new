@@ -5,7 +5,7 @@ import { User } from '@shared/types';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -32,8 +32,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   
   async function login(email: string, password: string) {
-    const { user } = await api.login(email, password);
-    setUser(user);
+    try {
+      const { user } = await api.login(email, password);
+      setUser(user);
+      return { success: true, user };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Login failed' };
+    }
   }
   
   async function register(email: string, username: string, password: string) {

@@ -20,7 +20,12 @@ export function Login() {
     
     try {
       if (isLogin) {
-        await login(email, password);
+        const result = await login(email, password);
+        if (!result.success) {
+          setError(result.error || 'Authentication failed');
+          setLoading(false);
+          return;
+        }
       } else {
         await register(email, username, password);
       }
