@@ -44,6 +44,9 @@ export const api = {
   me: () =>
     fetchAPI('/auth/me'),
   
+  adminExists: () =>
+    fetchAPI('/auth/admin-exists'),
+  
   // Games
   getGames: () =>
     fetchAPI('/games'),

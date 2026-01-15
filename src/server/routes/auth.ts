@@ -104,6 +104,17 @@ router.get('/me', authenticateToken, (req: AuthRequest, res) => {
   res.json({ user: req.user });
 });
 
+// Check if admin exists
+router.get('/admin-exists', async (req, res) => {
+  try {
+    const result = await query('SELECT id FROM users WHERE role = $1 LIMIT 1', ['admin']);
+    res.json({ exists: result.rows.length > 0 });
+  } catch (error) {
+    console.error('Admin exists check error:', error);
+    res.status(500).json({ error: 'Failed to check admin existence' });
+  }
+});
+
 // Setup initial admin with master password
 router.post('/setup-admin', authenticateToken, async (req: AuthRequest, res) => {
   try {
