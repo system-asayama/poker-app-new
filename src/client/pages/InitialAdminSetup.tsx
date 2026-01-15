@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { api } from '../utils/api';
 
 export default function InitialAdminSetup() {
-  const [, navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const [masterPassword, setMasterPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -16,7 +16,7 @@ export default function InitialAdminSetup() {
     try {
       await api.post('/auth/setup-admin', { masterPassword });
       alert('システム管理者として設定されました！');
-      navigate('/admin-login');
+      setLocation('/admin-login');
     } catch (err: any) {
       setError(err.message || '設定に失敗しました');
     } finally {
@@ -69,7 +69,7 @@ export default function InitialAdminSetup() {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => navigate('/login')}
+              onClick={() => setLocation('/login')}
               className="text-sm text-gray-400 hover:text-white transition"
             >
               ← ログインページに戻る
