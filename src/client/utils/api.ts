@@ -71,6 +71,9 @@ export const api = {
   get: (endpoint: string) =>
     fetchAPI(endpoint),
   
+  post: (endpoint: string, body: any) =>
+    fetchAPI(endpoint, { method: 'POST', body }),
+  
   patch: (endpoint: string, body: any) =>
     fetchAPI(endpoint, { method: 'PATCH', body }),
   

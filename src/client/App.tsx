@@ -7,6 +7,7 @@ import { Game } from './pages/Game';
 import { Admin } from './pages/Admin';
 import { AdminLogin } from './pages/AdminLogin';
 import { UserManagement } from './pages/UserManagement';
+import InitialAdminSetup from './pages/InitialAdminSetup';
 
 function PrivateRoute({ component: Component, ...rest }: any) {
   const { user, loading } = useAuth();
@@ -27,6 +28,9 @@ function AppRoutes() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/admin-login" component={AdminLogin} />
+      <Route path="/setup-admin">
+        {() => <PrivateRoute component={InitialAdminSetup} />}
+      </Route>
       <Route path="/">
         {() => <PrivateRoute component={Home} />}
       </Route>

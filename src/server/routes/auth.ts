@@ -104,4 +104,43 @@ router.get('/me', authenticateToken, (req: AuthRequest, res) => {
   res.json({ user: req.user });
 });
 
+// Setup initial admin with master password
+router.post('/setup-admin', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { masterPassword } = req.body;
+    const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'admin-n-N31415926!!';
+
+    if (!masterPassword) {
+      return res.status(400).json({ error: 'Master password is required' });
+    }
+
+    // Check if master password is correct
+    if (masterPassword !== MASTER_PASSWORD) {
+      return res.status(403).json({ error: 'Invalid master password' });
+    }
+
+    // Check if any admin already exists
+    const existingAdmins = await query('SELECT id FROM users WHERE role = $1 LIMIT 1', ['admin']);
+    if (existingAdmins.rows.length > 0) {
+      return res.status(400).json({ error: 'An admin already exists. Please contact the existing admin.' });
+    }
+
+    // Promote current user to admin
+    const result = await query(
+      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, username, role, chips, created_at',
+      ['admin', req.user!.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = result.rows[0] as User;
+    res.json({ user, message: 'Successfully promoted to admin' });
+  } catch (error) {
+    console.error('Setup admin error:', error);
+    res.status(500).json({ error: 'Failed to setup admin' });
+  }
+});
+
 export default router;
