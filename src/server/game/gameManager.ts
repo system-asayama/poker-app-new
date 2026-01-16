@@ -470,11 +470,17 @@ export class GameManager {
     // Special case for preflop: check if big blind has acted
     if (currentPhase === 'preflop') {
       // Big blind is at position (dealer_position + 2) % player_count
-      const bigBlindResult = await query(
-        `SELECT id FROM game_players
-         WHERE game_id = $1 AND position = (SELECT (dealer_position + 2) % COUNT(*) FROM game_players WHERE game_id = $1)
-         LIMIT 1`,
+      // First get the player count and dealer position
+      const countResult = await query(
+        'SELECT COUNT(*) as player_count FROM game_players WHERE game_id = $1',
         [gameId]
+      );
+      const playerCount = parseInt(countResult.rows[0].player_count);
+      const bigBlindPosition = (dealerPosition + 2) % playerCount;
+      
+      const bigBlindResult = await query(
+        'SELECT id FROM game_players WHERE game_id = $1 AND position = $2 LIMIT 1',
+        [gameId, bigBlindPosition]
       );
       
       if (bigBlindResult.rows.length > 0) {
