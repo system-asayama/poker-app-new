@@ -441,42 +441,93 @@ export class GameManager {
   
   private async isBettingRoundComplete(gameId: number): Promise<boolean> {
     // Get current game phase
-    const gameResult = await query('SELECT current_phase FROM games WHERE id = $1', [gameId]);
-    const currentPhase = gameResult.rows[0].current_phase;
+    const gameResult = await query('SELECT current_phase, current_turn FROM games WHERE id = $1', [gameId]);
+    const { current_phase: currentPhase, current_turn: currentTurn } = gameResult.rows[0];
     
-    // Check if all active players have the same bet
-    const betResult = await query(
-      `SELECT COUNT(*) as active_count, 
-              COUNT(DISTINCT current_bet) as distinct_bets
-       FROM game_players 
-       WHERE game_id = $1 AND status = 'active'`,
+    // Get all active players
+    const playersResult = await query(
+      `SELECT id, current_bet FROM game_players 
+       WHERE game_id = $1 AND status = 'active'
+       ORDER BY position`,
       [gameId]
     );
     
-    const { active_count, distinct_bets } = betResult.rows[0];
+    const activePlayers = playersResult.rows;
+    const active_count = activePlayers.length;
     
-    // Check if all active players have acted in this phase
+    if (active_count === 0) {
+      return true; // No active players, round is complete
+    }
+    
+    // Check if all active players have the same bet
+    const bets = activePlayers.map(p => parseInt(p.current_bet));
+    const allBetsEqual = bets.every(bet => bet === bets[0]);
+    
+    if (!allBetsEqual) {
+      return false; // Not all bets are equal
+    }
+    
+    // Find the last raise/bet action in this phase
+    const lastRaiseResult = await query(
+      `SELECT player_id, created_at
+       FROM game_actions
+       WHERE game_id = $1 AND phase = $2 AND action IN ('raise', 'bet')
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [gameId, currentPhase]
+    );
+    
+    // If there was a raise/bet, check if all active players have acted AFTER it
+    if (lastRaiseResult.rows.length > 0) {
+      const lastRaiseTime = lastRaiseResult.rows[0].created_at;
+      const lastRaisePlayerId = lastRaiseResult.rows[0].player_id;
+      
+      // Check if all active players (except folded) have acted after the last raise
+      const actionsAfterRaiseResult = await query(
+        `SELECT COUNT(DISTINCT player_id) as players_acted_after_raise
+         FROM game_actions
+         WHERE game_id = $1 AND phase = $2 AND created_at > $3
+           AND player_id IN (SELECT id FROM game_players WHERE game_id = $1 AND status = 'active')`,
+        [gameId, currentPhase, lastRaiseTime]
+      );
+      
+      const playersActedAfterRaise = parseInt(actionsAfterRaiseResult.rows[0].players_acted_after_raise);
+      
+      // All active players except the raiser must have acted after the raise
+      const requiredActions = active_count - 1;
+      const isComplete = playersActedAfterRaise >= requiredActions;
+      
+      console.log('[isBettingRoundComplete] After raise', { 
+        gameId, 
+        currentPhase,
+        active_count,
+        lastRaisePlayerId,
+        playersActedAfterRaise,
+        requiredActions,
+        allBetsEqual,
+        isComplete 
+      });
+      
+      return isComplete;
+    }
+    
+    // No raise/bet in this phase, just check if all players have acted
     const actionResult = await query(
-      `SELECT COUNT(DISTINCT gp.id) as players_acted
-       FROM game_players gp
-       LEFT JOIN game_actions ga ON gp.id = ga.player_id AND ga.game_id = $1 AND ga.phase = $2
-       WHERE gp.game_id = $1 AND gp.status = 'active' AND ga.id IS NOT NULL`,
+      `SELECT COUNT(DISTINCT player_id) as players_acted
+       FROM game_actions
+       WHERE game_id = $1 AND phase = $2
+         AND player_id IN (SELECT id FROM game_players WHERE game_id = $1 AND status = 'active')`,
       [gameId, currentPhase]
     );
     
     const players_acted = parseInt(actionResult.rows[0].players_acted);
-    const active_count_num = parseInt(active_count);
-    const distinct_bets_num = parseInt(distinct_bets);
+    const allPlayersActed = players_acted === active_count;
+    const isComplete = allBetsEqual && allPlayersActed;
     
-    const allPlayersActed = players_acted === active_count_num;
-    const allBetsEqual = distinct_bets_num === 1;
-    const isComplete = active_count_num > 0 && allBetsEqual && allPlayersActed;
-    
-    console.log('[isBettingRoundComplete]', { 
+    console.log('[isBettingRoundComplete] No raise', { 
       gameId, 
       currentPhase,
-      active_count: active_count_num, 
-      distinct_bets: distinct_bets_num, 
+      active_count,
       players_acted,
       allPlayersActed,
       allBetsEqual,
