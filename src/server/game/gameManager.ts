@@ -440,9 +440,9 @@ export class GameManager {
   }
   
   private async isBettingRoundComplete(gameId: number): Promise<boolean> {
-    // Get current game phase
-    const gameResult = await query('SELECT current_phase, current_turn FROM games WHERE id = $1', [gameId]);
-    const { current_phase: currentPhase, current_turn: currentTurn } = gameResult.rows[0];
+    // Get current game phase and dealer position
+    const gameResult = await query('SELECT current_phase, current_turn, dealer_position FROM games WHERE id = $1', [gameId]);
+    const { current_phase: currentPhase, current_turn: currentTurn, dealer_position: dealerPosition } = gameResult.rows[0];
     
     // Get all active players
     const playersResult = await query(
@@ -465,6 +465,42 @@ export class GameManager {
     
     if (!allBetsEqual) {
       return false; // Not all bets are equal
+    }
+    
+    // Special case for preflop: check if big blind has acted
+    if (currentPhase === 'preflop') {
+      // Big blind is at position (dealer_position + 2) % player_count
+      const bigBlindResult = await query(
+        `SELECT id FROM game_players
+         WHERE game_id = $1 AND position = (SELECT (dealer_position + 2) % COUNT(*) FROM game_players WHERE game_id = $1)
+         LIMIT 1`,
+        [gameId]
+      );
+      
+      if (bigBlindResult.rows.length > 0) {
+        const bigBlindId = bigBlindResult.rows[0].id;
+        
+        // Check if big blind has acted in this phase
+        const bigBlindActionResult = await query(
+          `SELECT action FROM game_actions
+           WHERE game_id = $1 AND phase = $2 AND player_id = $3
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [gameId, currentPhase, bigBlindId]
+        );
+        
+        // If big blind has acted and all bets are equal, round is complete
+        if (bigBlindActionResult.rows.length > 0 && allBetsEqual) {
+          console.log('[isBettingRoundComplete] Preflop - big blind acted', {
+            gameId,
+            bigBlindId,
+            bigBlindAction: bigBlindActionResult.rows[0].action,
+            allBetsEqual,
+            isComplete: true
+          });
+          return true;
+        }
+      }
     }
     
     // Find the last raise/bet action in this phase
