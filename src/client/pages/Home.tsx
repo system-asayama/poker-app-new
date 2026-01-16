@@ -74,14 +74,6 @@ export function Home() {
             </p>
           </div>
           <div className="flex gap-4">
-            {user?.role === 'admin' && user?.loginType === 'admin' && (
-              <button
-                onClick={() => setLocation('/admin')}
-                className="btn btn-secondary"
-              >
-                管理画面
-              </button>
-            )}
             <button onClick={logout} className="btn btn-secondary">
               ログアウト
             </button>
@@ -105,9 +97,9 @@ export function Home() {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-poker-gold mb-1">
-                プレイヤー
+                {games.filter(g => g.status === 'waiting').length}
               </div>
-              <div className="text-sm text-gray-400">ロール</div>
+              <div className="text-sm text-gray-400">待機中のゲーム</div>
             </div>
           </div>
         </div>
