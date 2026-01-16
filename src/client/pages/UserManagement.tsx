@@ -32,7 +32,7 @@ export function UserManagement() {
     try {
       setLoading(true);
       const response = await api.get('/users');
-      setUsers(response.data.users);
+      setUsers(response.users);
     } catch (err: any) {
       setError(err.response?.data?.error || 'ユーザー情報の取得に失敗しました');
     } finally {
