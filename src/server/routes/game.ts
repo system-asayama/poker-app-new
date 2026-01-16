@@ -205,11 +205,15 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
 // Get all games
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    // Admin can see all games, regular users only see waiting games
+    const isAdmin = req.user?.role === 'admin';
+    const statusFilter = isAdmin ? '' : "WHERE g.status = 'waiting'";
+    
     const result = await query(
       `SELECT g.*, COUNT(gp.id) as player_count
        FROM games g
        LEFT JOIN game_players gp ON g.id = gp.game_id
-       WHERE g.status = 'waiting'
+       ${statusFilter}
        GROUP BY g.id
        ORDER BY g.created_at DESC
        LIMIT 20`
