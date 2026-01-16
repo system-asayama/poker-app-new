@@ -384,7 +384,28 @@ export class GameManager {
     
     const players = playersResult.rows.map(this.mapGamePlayer);
     
-    // Evaluate hands
+    // Evaluate hands for all players (including folded)
+    const allPlayersResult = await client.query(
+      'SELECT * FROM game_players WHERE game_id = $1',
+      [gameId]
+    );
+    const allPlayers = allPlayersResult.rows.map(this.mapGamePlayer);
+    
+    const allHands = allPlayers.map((player: GamePlayer) => ({
+      playerId: player.id,
+      hand: evaluateHand(player.holeCards, game.communityCards),
+      status: player.status,
+    }));
+    
+    // Save hand results for all players
+    for (const handResult of allHands) {
+      await client.query(
+        'UPDATE game_players SET hand_rank = $1, hand_description = $2 WHERE id = $3',
+        [handResult.hand.rank, this.getHandDescription(handResult.hand.rank), handResult.playerId]
+      );
+    }
+    
+    // Evaluate hands for active players only
     const hands = players.map((player: GamePlayer) => ({
       player,
       hand: evaluateHand(player.holeCards, game.communityCards),
@@ -404,10 +425,34 @@ export class GameManager {
       );
     }
     
+    // Save winner information
+    const winnerIds = winners.map((w: any) => w.player.id);
+    const winnerInfo = {
+      playerIds: winnerIds,
+      handRank: winners[0].hand.rank,
+      amount: winAmount,
+    };
+    
     await client.query(
-      'UPDATE games SET status = $1, current_phase = $2, current_turn = NULL WHERE id = $3',
-      ['finished', 'showdown', gameId]
+      'UPDATE games SET status = $1, current_phase = $2, current_turn = NULL, winners = $3 WHERE id = $4',
+      ['finished', 'showdown', JSON.stringify(winnerInfo), gameId]
     );
+  }
+  
+  private getHandDescription(rank: string): string {
+    const descriptions: Record<string, string> = {
+      'high_card': 'ハイカード',
+      'one_pair': 'ワンペア',
+      'two_pair': 'ツーペア',
+      'three_of_a_kind': 'スリーカード',
+      'straight': 'ストレート',
+      'flush': 'フラッシュ',
+      'full_house': 'フルハウス',
+      'four_of_a_kind': 'フォーカード',
+      'straight_flush': 'ストレートフラッシュ',
+      'royal_flush': 'ロイヤルフラッシュ',
+    };
+    return descriptions[rank] || rank;
   }
   
   private async getCurrentBet(gameId: number): Promise<number> {

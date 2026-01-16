@@ -335,23 +335,66 @@ export function Game() {
               </div>
             )}
             
-            {/* Players Results */}
+            {/* Winner Announcement */}
+            {(game as any).winners && (
+              <div className="mb-6 text-center">
+                <div className="text-2xl font-bold text-poker-gold mb-2">
+                  🏆 勝者 🏆
+                </div>
+                <div className="text-xl text-white">
+                  {players
+                    .filter(p => JSON.parse((game as any).winners).playerIds.includes(p.id))
+                    .map(p => p.isAi ? p.aiName : p.user?.username)
+                    .join(', ')}
+                </div>
+                <div className="text-lg text-gray-300 mt-2">
+                  {(() => {
+                    const winners = JSON.parse((game as any).winners);
+                    const descriptions: Record<string, string> = {
+                      'high_card': 'ハイカード',
+                      'one_pair': 'ワンペア',
+                      'two_pair': 'ツーペア',
+                      'three_of_a_kind': 'スリーカード',
+                      'straight': 'ストレート',
+                      'flush': 'フラッシュ',
+                      'full_house': 'フルハウス',
+                      'four_of_a_kind': 'フォーカード',
+                      'straight_flush': 'ストレートフラッシュ',
+                      'royal_flush': 'ロイヤルフラッシュ',
+                    };
+                    return descriptions[winners.handRank] || winners.handRank;
+                  })()} - {JSON.parse((game as any).winners).amount.toLocaleString()} チップ獲得
+                </div>
+              </div>
+            )}
+            
+            {/* All Players Results */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {players
-                .filter(p => p.status === 'active' || p.status === 'allin')
-                .map((player) => (
+              {players.map((player) => {
+                const isWinner = (game as any).winners && JSON.parse((game as any).winners).playerIds.includes(player.id);
+                return (
                   <div
                     key={player.id}
-                    className="bg-gray-700 rounded-lg p-4 border-2 border-gray-600"
+                    className={`rounded-lg p-4 border-2 ${
+                      isWinner
+                        ? 'bg-gradient-to-br from-yellow-900/50 to-yellow-800/30 border-poker-gold'
+                        : player.status === 'folded'
+                        ? 'bg-gray-700/50 border-gray-600'
+                        : 'bg-gray-700 border-gray-600'
+                    }`}
                   >
                     <div className="text-center mb-3">
                       <div className="font-bold text-lg flex items-center justify-center gap-2">
+                        {isWinner && <span className="text-2xl">🏆</span>}
                         {player.isAi && <span className="text-blue-400">🤖</span>}
                         {player.isAi ? player.aiName : player.user?.username}
                       </div>
                       <div className="text-sm text-gray-400">
                         {player.chips.toLocaleString()} チップ
                       </div>
+                      {player.status === 'folded' && (
+                        <div className="text-xs text-red-400 mt-1">フォールド</div>
+                      )}
                     </div>
                     
                     {/* Player's Hole Cards */}
@@ -361,29 +404,16 @@ export function Game() {
                       ))}
                     </div>
                     
-                    {/* Hand Rank (if available) */}
-                    <div className="text-center text-sm text-gray-300">
-                      {/* Hand evaluation can be added here */}
-                    </div>
-                  </div>
-                ))}
-            </div>
-            
-            {/* Folded Players */}
-            {players.filter(p => p.status === 'folded').length > 0 && (
-              <div className="mb-6">
-                <div className="text-center text-gray-400 mb-2">フォールドしたプレイヤー</div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {players
-                    .filter(p => p.status === 'folded')
-                    .map((player) => (
-                      <div key={player.id} className="bg-gray-700 rounded px-3 py-1 text-sm">
-                        {player.isAi ? player.aiName : player.user?.username}
+                    {/* Hand Rank */}
+                    {(player as any).handDescription && (
+                      <div className="text-center text-sm font-bold text-poker-gold">
+                        {(player as any).handDescription}
                       </div>
-                    ))}
-                </div>
-              </div>
-            )}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
             
             <div className="text-center">
               <button
