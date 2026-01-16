@@ -217,16 +217,16 @@ export class GameManager {
       
       // Check if only one player remains (all others folded)
       const activePlayers = await client.query(
-        'SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status IN ($2, $3)',
-        [gameId, 'active', 'allin']
+        "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin')",
+        [gameId]
       );
       const activeCount = parseInt(activePlayers.rows[0].count);
       
       if (activeCount <= 1) {
         // Game over - award pot to winner
         const winnerResult = await client.query(
-          'SELECT id, chips FROM game_players WHERE game_id = $1 AND status IN ($2, $3) LIMIT 1',
-          [gameId, 'active', 'allin']
+          "SELECT id, chips FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin') LIMIT 1",
+          [gameId]
         );
         
         if (winnerResult.rows.length > 0) {
