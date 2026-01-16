@@ -14,7 +14,8 @@
     "copy:sql": "mkdir -p dist/server/database && cp src/server/database/schema.sql dist/server/database/",
     "start": "node dist/server/index.js",
     "migrate": "node dist/server/migrate.js",
-    "test": "vitest"
+    "test": "vitest",
+    "heroku-postbuild": "npm run build"
   },
   "dependencies": {
     "express": "^4.18.2",
