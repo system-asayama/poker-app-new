@@ -411,8 +411,8 @@ export class GameManager {
       hand: evaluateHand(player.holeCards, game.communityCards),
     }));
     
-    // Find winner(s)
-    hands.sort((a: any, b: any) => compareHands(b.hand, a.hand));
+    // Find winner(s) - sort in descending order (highest hand value first)
+    hands.sort((a: any, b: any) => b.hand.value - a.hand.value);
     const winners = hands.filter((h: any) => h.hand.value === hands[0].hand.value);
     
     // Distribute pot
