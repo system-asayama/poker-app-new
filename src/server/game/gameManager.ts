@@ -229,8 +229,8 @@ export class GameManager {
       
       // Emit game update via Socket.IO
       if (this.io) {
-        this.io.to(`game-${gameId}`).emit('game-updated', { gameId });
-        console.log(`[Socket.IO] Emitted game-updated for game ${gameId}`);
+        this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+        console.log(`[Socket.IO] Emitted game-update for game ${gameId}`);
       }
       
       // Trigger AI action if next player is AI
