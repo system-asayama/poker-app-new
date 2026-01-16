@@ -13,7 +13,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     const result = await query(
-      'SELECT id, email, username, role, chips, created_at, last_login FROM users ORDER BY created_at DESC'
+      'SELECT id, email, username, role, chips, created_at FROM users ORDER BY created_at DESC'
     );
 
     res.json({ users: result.rows });
