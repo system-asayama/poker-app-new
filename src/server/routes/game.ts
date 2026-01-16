@@ -132,8 +132,24 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
     }
     
     const game = gameResult.rows[0];
-    game.communityCards = Array.isArray(game.community_cards) ? game.community_cards : [];
-    delete game.deck; // Don't send deck to clients
+    
+    // Convert to camelCase
+    const gameData = {
+      id: game.id,
+      roomCode: game.room_code,
+      maxPlayers: game.max_players,
+      status: game.status,
+      currentPhase: game.current_phase,
+      pot: game.pot,
+      communityCards: Array.isArray(game.community_cards) ? game.community_cards : [],
+      dealerPosition: game.dealer_position,
+      currentTurn: game.current_turn,
+      smallBlind: game.small_blind,
+      bigBlind: game.big_blind,
+      isPrivate: game.is_private,
+      hostId: game.host_id,
+      createdAt: game.created_at,
+    };
     
     const playersResult = await query(
       `SELECT gp.*, u.username, u.email 
@@ -178,7 +194,7 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
       createdAt: new Date(a.created_at),
     }));
     
-    res.json({ game, players, actions });
+    res.json({ game: gameData, players, actions });
   } catch (error) {
     console.error('Get game state error:', error);
     res.status(500).json({ error: 'Failed to get game state' });
