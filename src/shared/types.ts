@@ -17,6 +17,7 @@ export interface User {
   role: 'player' | 'admin';
   chips: number;
   createdAt: Date;
+  loginType?: 'admin' | 'player';
 }
 
 export interface Game {

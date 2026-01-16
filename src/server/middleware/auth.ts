@@ -31,7 +31,7 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
   next();
 }
 
-export function generateToken(user: User): string {
+export function generateToken(user: User, loginType: 'admin' | 'player' = 'player'): string {
   return jwt.sign(
     {
       id: user.id,
@@ -39,6 +39,7 @@ export function generateToken(user: User): string {
       username: user.username,
       role: user.role,
       chips: user.chips,
+      loginType,
     },
     JWT_SECRET,
     { expiresIn: '7d' }

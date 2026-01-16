@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../utils/api';
 
 export function AdminLogin() {
   const [, setLocation] = useLocation();
@@ -16,23 +17,12 @@ export function AdminLogin() {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const { user } = await api.adminLogin(email, password);
       
-      if (result.success && result.user) {
-        // 管理者権限チェック
-        if (result.user.role !== 'admin') {
-          setError('このページは管理者専用です。管理者権限が必要です。');
-          setLoading(false);
-          return;
-        }
-        
-        // 管理者画面にリダイレクト
-        setLocation('/admin');
-      } else {
-        setError(result.error || 'ログインに失敗しました');
-      }
-    } catch (err) {
-      setError('ログインに失敗しました');
+      // 管理者画面にリダイレクト
+      window.location.href = '/admin';
+    } catch (err: any) {
+      setError(err.message || 'ログインに失敗しました');
     } finally {
       setLoading(false);
     }

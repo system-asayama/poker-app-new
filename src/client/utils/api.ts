@@ -38,6 +38,9 @@ export const api = {
   login: (email: string, password: string) =>
     fetchAPI('/auth/login', { method: 'POST', body: { email, password } }),
   
+  adminLogin: (email: string, password: string) =>
+    fetchAPI('/auth/admin-login', { method: 'POST', body: { email, password } }),
+  
   logout: () =>
     fetchAPI('/auth/logout', { method: 'POST' }),
   

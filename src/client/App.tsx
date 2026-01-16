@@ -38,12 +38,12 @@ function AdminRoute({ component: Component, ...rest }: any) {
     return <Redirect to="/login" />;
   }
   
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' || user.loginType !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl text-red-400 mb-4">アクセス拒否</div>
-          <div className="text-gray-400 mb-6">このページは管理者専用です</div>
+          <div className="text-gray-400 mb-6">このページは管理者専用です。管理者ログインからアクセスしてください。</div>
           <button
             onClick={() => window.location.href = '/'}
             className="px-6 py-2 bg-poker-gold text-gray-900 rounded-lg hover:bg-yellow-500 transition-colors"
