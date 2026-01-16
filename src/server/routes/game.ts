@@ -196,6 +196,26 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
     }));
     
     res.json({ game: gameData, players, actions });
+    
+    // After sending response, check if current turn is AI and trigger AI action
+    // This ensures AI turns are processed even if setTimeout fails
+    if (game.current_turn && game.status === 'playing') {
+      setImmediate(async () => {
+        try {
+          const currentPlayerResult = await query(
+            'SELECT is_ai FROM game_players WHERE id = $1',
+            [game.current_turn]
+          );
+          
+          if (currentPlayerResult.rows.length > 0 && currentPlayerResult.rows[0].is_ai) {
+            console.log(`[AI Fallback] Triggering AI turn for game ${gameId}, player ${game.current_turn}`);
+            setTimeout(() => gameManager.processAITurn(gameId, game.current_turn), 500);
+          }
+        } catch (err) {
+          console.error('[AI Fallback] Error checking AI turn:', err);
+        }
+      });
+    }
   } catch (error) {
     console.error('Get game state error:', error);
     res.status(500).json({ error: 'Failed to get game state' });
