@@ -396,7 +396,9 @@ export class GameManager {
     );
     
     const { active_count, distinct_bets } = result.rows[0];
-    return active_count > 0 && distinct_bets === 1;
+    const isComplete = active_count > 0 && distinct_bets === 1;
+    console.log('[isBettingRoundComplete]', { gameId, active_count, distinct_bets, isComplete });
+    return isComplete;
   }
   
   private generateRoomCode(): string {
