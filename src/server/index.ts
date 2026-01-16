@@ -10,6 +10,7 @@ import { initializeDatabase } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import usersRoutes from './routes/users.js';
+import { gameManager } from './game/gameManager.js';
 
 dotenv.config();
 
@@ -69,6 +70,9 @@ io.on('connection', (socket) => {
 
 // Make io available to routes
 app.set('io', io);
+
+// Set io instance in gameManager
+gameManager.setIO(io);
 
 // Initialize database and start server
 const PORT = process.env.PORT || 5000;

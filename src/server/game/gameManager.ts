@@ -3,8 +3,14 @@ import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { evaluateHand, compareHands } from './handEvaluator.js';
 import { Game, GamePlayer, GamePhase, PlayerAction, Winner, Card } from '@shared/types.js';
 import { AIEngine, AIDifficulty } from './aiEngine.js';
+import type { Server } from 'socket.io';
 
 export class GameManager {
+  private io?: Server;
+
+  setIO(io: Server) {
+    this.io = io;
+  }
   async createGame(maxPlayers: number, userId: number, isPrivate: boolean = false, invitedEmails: string[] = [], aiPlayers?: { count: number; difficulty: AIDifficulty }): Promise<Game> {
     const roomCode = this.generateRoomCode();
     const deck = shuffleDeck(createDeck());
@@ -220,6 +226,12 @@ export class GameManager {
       }
       
       await client.query('COMMIT');
+      
+      // Emit game update via Socket.IO
+      if (this.io) {
+        this.io.to(`game-${gameId}`).emit('game-updated', { gameId });
+        console.log(`[Socket.IO] Emitted game-updated for game ${gameId}`);
+      }
       
       // Trigger AI action if next player is AI
       setTimeout(() => this.processAITurn(gameId, nextTurn), 1500);
