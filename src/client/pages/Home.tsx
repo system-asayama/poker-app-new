@@ -74,7 +74,7 @@ export function Home() {
             </p>
           </div>
           <div className="flex gap-4">
-            {user?.role === 'admin' && (
+            {user?.role === 'admin' && user?.loginType === 'admin' && (
               <button
                 onClick={() => setLocation('/admin')}
                 className="btn btn-secondary"
@@ -105,7 +105,7 @@ export function Home() {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-poker-gold mb-1">
-                {user?.role === 'admin' ? '管理者' : 'プレイヤー'}
+                プレイヤー
               </div>
               <div className="text-sm text-gray-400">ロール</div>
             </div>
