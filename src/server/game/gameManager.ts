@@ -71,37 +71,44 @@ export class GameManager {
       // Shuffle and deal
       let deck = shuffleDeck(createDeck());
       
-      // Deal hole cards to each player
+      // Deal hole cards to each player and update in a single transaction
+      const holeCardsMap = new Map<number, any[]>();
       for (const player of players) {
         const { cards, remainingDeck } = dealCards(deck, 2);
         deck = remainingDeck;
-        
-        await client.query(
-          'UPDATE game_players SET hole_cards = $1 WHERE id = $2',
-          [JSON.stringify(cards), player.id]
-        );
+        holeCardsMap.set(player.id, cards);
       }
       
-      // Post blinds
+      // Determine blind positions
       const smallBlindPlayer = players[1 % players.length];
       const bigBlindPlayer = players[2 % players.length];
       
       console.log('[startGame] Small blind player:', { id: smallBlindPlayer.id, position: smallBlindPlayer.position, chips: smallBlindPlayer.chips, blind: game.smallBlind });
       console.log('[startGame] Big blind player:', { id: bigBlindPlayer.id, position: bigBlindPlayer.position, chips: bigBlindPlayer.chips, blind: game.bigBlind });
       
-      // Verify player data before update
-      const verifySmallBlind = await client.query('SELECT id, chips, current_bet FROM game_players WHERE id = $1', [smallBlindPlayer.id]);
-      console.log('[startGame] Small blind player in DB before update:', verifySmallBlind.rows[0]);
-      
-      await client.query(
-        'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
-        [game.smallBlind, smallBlindPlayer.id]
-      );
-      
-      await client.query(
-        'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
-        [game.bigBlind, bigBlindPlayer.id]
-      );
+      // Update all players in one go: set hole cards and deduct blinds where applicable
+      for (const player of players) {
+        const holeCards = holeCardsMap.get(player.id)!;
+        let newChips = player.chips;
+        let newCurrentBet = 0;
+        
+        if (player.id === smallBlindPlayer.id) {
+          newChips = player.chips - game.smallBlind;
+          newCurrentBet = game.smallBlind;
+          console.log('[startGame] Updating small blind player:', { id: player.id, oldChips: player.chips, newChips, bet: newCurrentBet });
+        } else if (player.id === bigBlindPlayer.id) {
+          newChips = player.chips - game.bigBlind;
+          newCurrentBet = game.bigBlind;
+          console.log('[startGame] Updating big blind player:', { id: player.id, oldChips: player.chips, newChips, bet: newCurrentBet });
+        } else {
+          console.log('[startGame] Updating regular player:', { id: player.id, chips: player.chips });
+        }
+        
+        await client.query(
+          'UPDATE game_players SET hole_cards = $1, chips = $2, current_bet = $3 WHERE id = $4',
+          [JSON.stringify(holeCards), newChips, newCurrentBet, player.id]
+        );
+      }
       
       const pot = game.smallBlind + game.bigBlind;
       const currentTurn = (3 % players.length);
