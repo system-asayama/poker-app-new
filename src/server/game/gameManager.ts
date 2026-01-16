@@ -332,13 +332,10 @@ export class GameManager {
   }
   
   private mapGame(row: any): Game {
-    console.log('mapGame row:', JSON.stringify(row, null, 2));
-    console.log('community_cards type:', typeof row.community_cards, 'value:', row.community_cards);
-    console.log('deck type:', typeof row.deck, 'value:', row.deck);
     return {
       ...row,
-      communityCards: (row.community_cards && row.community_cards !== '') ? JSON.parse(row.community_cards) : [],
-      deck: (row.deck && row.deck !== '') ? JSON.parse(row.deck) : [],
+      communityCards: Array.isArray(row.community_cards) ? row.community_cards : [],
+      deck: Array.isArray(row.deck) ? row.deck : [],
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -350,7 +347,7 @@ export class GameManager {
       gameId: row.game_id,
       userId: row.user_id,
       currentBet: row.current_bet,
-      holeCards: (row.hole_cards && row.hole_cards !== '') ? JSON.parse(row.hole_cards) : [],
+      holeCards: Array.isArray(row.hole_cards) ? row.hole_cards : [],
       isDealer: row.is_dealer,
       isAi: row.is_ai,
       aiDifficulty: row.ai_difficulty,
