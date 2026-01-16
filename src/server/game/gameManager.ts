@@ -387,7 +387,12 @@ export class GameManager {
   }
   
   private async isBettingRoundComplete(gameId: number): Promise<boolean> {
-    const result = await query(
+    // Get current game phase
+    const gameResult = await query('SELECT current_phase FROM games WHERE id = $1', [gameId]);
+    const currentPhase = gameResult.rows[0].current_phase;
+    
+    // Check if all active players have the same bet
+    const betResult = await query(
       `SELECT COUNT(*) as active_count, 
               COUNT(DISTINCT current_bet) as distinct_bets
        FROM game_players 
@@ -395,9 +400,36 @@ export class GameManager {
       [gameId]
     );
     
-    const { active_count, distinct_bets } = result.rows[0];
-    const isComplete = active_count > 0 && distinct_bets === 1;
-    console.log('[isBettingRoundComplete]', { gameId, active_count, distinct_bets, isComplete });
+    const { active_count, distinct_bets } = betResult.rows[0];
+    
+    // Check if all active players have acted in this phase
+    const actionResult = await query(
+      `SELECT COUNT(DISTINCT gp.id) as players_acted
+       FROM game_players gp
+       LEFT JOIN game_actions ga ON gp.id = ga.player_id AND ga.game_id = $1 AND ga.phase = $2
+       WHERE gp.game_id = $1 AND gp.status = 'active' AND ga.id IS NOT NULL`,
+      [gameId, currentPhase]
+    );
+    
+    const players_acted = parseInt(actionResult.rows[0].players_acted);
+    const active_count_num = parseInt(active_count);
+    const distinct_bets_num = parseInt(distinct_bets);
+    
+    const allPlayersActed = players_acted === active_count_num;
+    const allBetsEqual = distinct_bets_num === 1;
+    const isComplete = active_count_num > 0 && allBetsEqual && allPlayersActed;
+    
+    console.log('[isBettingRoundComplete]', { 
+      gameId, 
+      currentPhase,
+      active_count: active_count_num, 
+      distinct_bets: distinct_bets_num, 
+      players_acted,
+      allPlayersActed,
+      allBetsEqual,
+      isComplete 
+    });
+    
     return isComplete;
   }
   
