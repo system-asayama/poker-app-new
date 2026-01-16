@@ -306,10 +306,10 @@ export class GameManager {
     // Reset bets
     await client.query('UPDATE game_players SET current_bet = 0 WHERE game_id = $1', [gameId]);
     
-    // Get first active player
+    // Get first active player (including allin players)
     const playersResult = await client.query(
-      'SELECT id FROM game_players WHERE game_id = $1 AND status = $2 ORDER BY position LIMIT 1',
-      [gameId, 'active']
+      "SELECT id FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin') ORDER BY position LIMIT 1",
+      [gameId]
     );
     
     const nextTurn = playersResult.rows[0]?.id || null;
@@ -322,8 +322,8 @@ export class GameManager {
   
   private async handleShowdown(gameId: number, client: any): Promise<void> {
     const playersResult = await client.query(
-      'SELECT * FROM game_players WHERE game_id = $1 AND status IN ($2, $3)',
-      [gameId, 'active', 'allin']
+      "SELECT * FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin')",
+      [gameId]
     );
     
     const gameResult = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
