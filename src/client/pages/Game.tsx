@@ -336,42 +336,61 @@ export function Game() {
             )}
             
             {/* Winner Announcement */}
-            {(game as any).winners && (
-              <div className="mb-6 text-center">
-                <div className="text-2xl font-bold text-poker-gold mb-2">
-                  🏆 勝者 🏆
+            {(() => {
+              // Determine winners
+              let winnerData: { playerIds: number[], handRank?: string, amount?: number } | null = null;
+              
+              if ((game as any).winners) {
+                winnerData = JSON.parse((game as any).winners);
+              } else {
+                // Fallback: find player(s) with highest chips (gained chips from pot)
+                const activePlayers = players.filter(p => p.status === 'active' || p.status === 'allin');
+                if (activePlayers.length > 0) {
+                  const maxChips = Math.max(...activePlayers.map(p => p.chips));
+                  const winners = activePlayers.filter(p => p.chips === maxChips);
+                  winnerData = {
+                    playerIds: winners.map(w => w.id),
+                    amount: game.pot
+                  };
+                }
+              }
+              
+              if (!winnerData) return null;
+              
+              const winnerPlayers = players.filter(p => winnerData!.playerIds.includes(p.id));
+              const winnerNames = winnerPlayers.map(p => p.isAi ? p.aiName : p.user?.username).join(', ');
+              const winnerHandDesc = winnerPlayers[0]?.hand_description || winnerPlayers[0]?.handDescription;
+              
+              return (
+                <div className="bg-gradient-to-r from-poker-gold/20 to-yellow-600/20 border-2 border-poker-gold rounded-lg p-6 mb-6">
+                  <div className="text-2xl font-bold text-poker-gold mb-2">
+                    🏆 勝者 🏆
+                  </div>
+                  <div className="text-xl text-white">
+                    {winnerNames}
+                  </div>
+                  {winnerHandDesc && (
+                    <div className="text-lg text-gray-300 mt-2">
+                      {winnerHandDesc} - {(winnerData.amount || game.pot).toLocaleString()} チップ獲得
+                    </div>
+                  )}
                 </div>
-                <div className="text-xl text-white">
-                  {players
-                    .filter(p => JSON.parse((game as any).winners).playerIds.includes(p.id))
-                    .map(p => p.isAi ? p.aiName : p.user?.username)
-                    .join(', ')}
-                </div>
-                <div className="text-lg text-gray-300 mt-2">
-                  {(() => {
-                    const winners = JSON.parse((game as any).winners);
-                    const descriptions: Record<string, string> = {
-                      'high_card': 'ハイカード',
-                      'one_pair': 'ワンペア',
-                      'two_pair': 'ツーペア',
-                      'three_of_a_kind': 'スリーカード',
-                      'straight': 'ストレート',
-                      'flush': 'フラッシュ',
-                      'full_house': 'フルハウス',
-                      'four_of_a_kind': 'フォーカード',
-                      'straight_flush': 'ストレートフラッシュ',
-                      'royal_flush': 'ロイヤルフラッシュ',
-                    };
-                    return descriptions[winners.handRank] || winners.handRank;
-                  })()} - {JSON.parse((game as any).winners).amount.toLocaleString()} チップ獲得
-                </div>
-              </div>
-            )}
+              );
+            })()}
             
             {/* All Players Results */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {players.map((player) => {
-                const isWinner = (game as any).winners && JSON.parse((game as any).winners).playerIds.includes(player.id);
+                // Determine if this player is a winner
+                let isWinner = false;
+                if ((game as any).winners) {
+                  isWinner = JSON.parse((game as any).winners).playerIds.includes(player.id);
+                } else {
+                  // Fallback: check if player has highest chips among active players
+                  const activePlayers = players.filter(p => p.status === 'active' || p.status === 'allin');
+                  const maxChips = Math.max(...activePlayers.map(p => p.chips));
+                  isWinner = player.chips === maxChips && (player.status === 'active' || player.status === 'allin');
+                }
                 return (
                   <div
                     key={player.id}
@@ -405,9 +424,9 @@ export function Game() {
                     </div>
                     
                     {/* Hand Rank */}
-                    {(player as any).handDescription && (
+                    {((player as any).hand_description || (player as any).handDescription) && (
                       <div className="text-center text-sm font-bold text-poker-gold">
-                        {(player as any).handDescription}
+                        {(player as any).hand_description || (player as any).handDescription}
                       </div>
                     )}
                   </div>
