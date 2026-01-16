@@ -309,20 +309,92 @@ export function Game() {
           </div>
         )}
         
-        {/* Game Finished */}
-        {game.status === 'finished' && (
-          <div className="bg-gray-800 rounded-2xl p-8 text-center">
-            <h2 className="text-3xl font-bold text-poker-gold mb-4">
-              ゲーム終了！
+        {/* Game Finished / Showdown */}
+        {(game.status === 'finished' || game.currentPhase === 'showdown') && (
+          <div className="bg-gray-800 rounded-2xl p-8">
+            <h2 className="text-3xl font-bold text-poker-gold mb-6 text-center">
+              {game.currentPhase === 'showdown' ? 'ショーダウン！' : 'ゲーム終了！'}
             </h2>
-            <button
-              onClick={() => setLocation('/')}
-              className="btn btn-primary"
-            >
-              ホームに戻る
-            </button>
+            
+            {/* Community Cards */}
+            {game.communityCards.length > 0 && (
+              <div className="mb-8">
+                <div className="text-center mb-4">
+                  <div className="text-xl font-bold text-white mb-2">
+                    コミュニティカード
+                  </div>
+                  <div className="text-lg text-poker-gold">
+                    ポット: {game.pot.toLocaleString()}
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-center">
+                  {game.communityCards.map((card, i) => (
+                    <Card key={i} card={card} className="w-20" />
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Players Results */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {players
+                .filter(p => p.status === 'active' || p.status === 'allin')
+                .map((player) => (
+                  <div
+                    key={player.id}
+                    className="bg-gray-700 rounded-lg p-4 border-2 border-gray-600"
+                  >
+                    <div className="text-center mb-3">
+                      <div className="font-bold text-lg flex items-center justify-center gap-2">
+                        {player.isAi && <span className="text-blue-400">🤖</span>}
+                        {player.isAi ? player.aiName : player.user?.username}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {player.chips.toLocaleString()} チップ
+                      </div>
+                    </div>
+                    
+                    {/* Player's Hole Cards */}
+                    <div className="flex gap-2 justify-center mb-3">
+                      {player.holeCards.map((card, i) => (
+                        <Card key={i} card={card} className="w-16" />
+                      ))}
+                    </div>
+                    
+                    {/* Hand Rank (if available) */}
+                    <div className="text-center text-sm text-gray-300">
+                      {/* Hand evaluation can be added here */}
+                    </div>
+                  </div>
+                ))}
+            </div>
+            
+            {/* Folded Players */}
+            {players.filter(p => p.status === 'folded').length > 0 && (
+              <div className="mb-6">
+                <div className="text-center text-gray-400 mb-2">フォールドしたプレイヤー</div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {players
+                    .filter(p => p.status === 'folded')
+                    .map((player) => (
+                      <div key={player.id} className="bg-gray-700 rounded px-3 py-1 text-sm">
+                        {player.isAi ? player.aiName : player.user?.username}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="text-center">
+              <button
+                onClick={() => setLocation('/')}
+                className="btn btn-primary"
+              >
+                ホームに戻る
+              </button>
+            </div>
           </div>
-        )}
+        )
       </div>
     </div>
   );

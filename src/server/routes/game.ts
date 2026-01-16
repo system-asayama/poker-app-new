@@ -174,8 +174,9 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
         },
       };
       
-      // Hide other players' hole cards
-      if (p.user_id !== req.user!.id) {
+      // Hide other players' hole cards (except during showdown or when game is finished)
+      const shouldShowAllCards = game.current_phase === 'showdown' || game.status === 'finished';
+      if (p.user_id !== req.user!.id && !shouldShowAllCards) {
         player.holeCards = player.holeCards.map(() => ({ suit: 'hidden', rank: 'hidden' }));
       }
       
