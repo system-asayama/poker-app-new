@@ -334,8 +334,8 @@ export class GameManager {
   private mapGame(row: any): Game {
     return {
       ...row,
-      communityCards: JSON.parse(row.community_cards || '[]'),
-      deck: JSON.parse(row.deck || '[]'),
+      communityCards: row.community_cards ? JSON.parse(row.community_cards) : [],
+      deck: row.deck ? JSON.parse(row.deck) : [],
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
@@ -347,7 +347,7 @@ export class GameManager {
       gameId: row.game_id,
       userId: row.user_id,
       currentBet: row.current_bet,
-      holeCards: JSON.parse(row.hole_cards || '[]'),
+      holeCards: row.hole_cards ? JSON.parse(row.hole_cards) : [],
       isDealer: row.is_dealer,
       isAi: row.is_ai,
       aiDifficulty: row.ai_difficulty,
