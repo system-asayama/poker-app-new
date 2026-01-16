@@ -62,6 +62,8 @@ export class GameManager {
       );
       const players = playersResult.rows.map(this.mapGamePlayer);
       
+      console.log('[startGame] Players loaded:', players.map(p => ({ id: p.id, position: p.position, chips: p.chips, currentBet: p.currentBet, isAi: p.isAi })));
+      
       if (players.length < 2) {
         throw new Error('At least 2 players required to start');
       }
@@ -83,6 +85,13 @@ export class GameManager {
       // Post blinds
       const smallBlindPlayer = players[1 % players.length];
       const bigBlindPlayer = players[2 % players.length];
+      
+      console.log('[startGame] Small blind player:', { id: smallBlindPlayer.id, position: smallBlindPlayer.position, chips: smallBlindPlayer.chips, blind: game.smallBlind });
+      console.log('[startGame] Big blind player:', { id: bigBlindPlayer.id, position: bigBlindPlayer.position, chips: bigBlindPlayer.chips, blind: game.bigBlind });
+      
+      // Verify player data before update
+      const verifySmallBlind = await client.query('SELECT id, chips, current_bet FROM game_players WHERE id = $1', [smallBlindPlayer.id]);
+      console.log('[startGame] Small blind player in DB before update:', verifySmallBlind.rows[0]);
       
       await client.query(
         'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
