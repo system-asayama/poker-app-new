@@ -363,7 +363,7 @@ export class GameManager {
       `INSERT INTO game_players (game_id, user_id, position, chips, current_bet, hole_cards, status, is_dealer, is_ai, ai_difficulty, ai_name)
        VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [gameId, position, startingChips, 0, JSON.stringify([]), 'active', false, true, difficulty, aiName]
+      [gameId, null, position, startingChips, 0, JSON.stringify([]), 'active', false, true, difficulty, aiName]
     );
     
     return this.mapGamePlayer(result.rows[0]);
