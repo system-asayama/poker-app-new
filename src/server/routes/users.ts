@@ -8,7 +8,7 @@ const router = express.Router();
 // Get all users (admin only)
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== 'admin') {
+    if (req.user?.role !== 'admin' || req.user?.loginType !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -26,7 +26,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 // Update user role (admin only)
 router.patch('/:userId/role', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== 'admin') {
+    if (req.user?.role !== 'admin' || req.user?.loginType !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
@@ -61,7 +61,7 @@ router.patch('/:userId/role', authenticateToken, async (req: AuthRequest, res) =
 // Delete user (admin only)
 router.delete('/:userId', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    if (req.user?.role !== 'admin') {
+    if (req.user?.role !== 'admin' || req.user?.loginType !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
