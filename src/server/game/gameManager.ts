@@ -215,14 +215,46 @@ export class GameManager {
       // Update pot
       await client.query('UPDATE games SET pot = $1 WHERE id = $2', [newPot, gameId]);
       
-      // Move to next player
-      const nextTurn = await this.getNextPlayer(gameId, playerId);
+      // Check if only one player remains (all others folded)
+      const activePlayers = await client.query(
+        'SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status IN ($2, $3)',
+        [gameId, 'active', 'allin']
+      );
+      const activeCount = parseInt(activePlayers.rows[0].count);
       
-      // Check if betting round is complete
-      if (await this.isBettingRoundComplete(gameId)) {
-        await this.advancePhase(gameId, client);
+      if (activeCount <= 1) {
+        // Game over - award pot to winner
+        const winnerResult = await client.query(
+          'SELECT id, chips FROM game_players WHERE game_id = $1 AND status IN ($2, $3) LIMIT 1',
+          [gameId, 'active', 'allin']
+        );
+        
+        if (winnerResult.rows.length > 0) {
+          const winner = winnerResult.rows[0];
+          await client.query(
+            'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
+            [newPot, winner.id]
+          );
+          
+          // Record win action
+          await client.query(
+            'INSERT INTO game_actions (game_id, player_id, action, amount, phase) VALUES ($1, $2, $3, $4, $5)',
+            [gameId, winner.id, 'win', newPot, game.currentPhase]
+          );
+        }
+        
+        // End game
+        await client.query('UPDATE games SET status = $1, pot = 0 WHERE id = $2', ['finished', gameId]);
       } else {
-        await client.query('UPDATE games SET current_turn = $1 WHERE id = $2', [nextTurn, gameId]);
+        // Move to next player
+        const nextTurn = await this.getNextPlayer(gameId, playerId);
+        
+        // Check if betting round is complete
+        if (await this.isBettingRoundComplete(gameId)) {
+          await this.advancePhase(gameId, client);
+        } else {
+          await client.query('UPDATE games SET current_turn = $1 WHERE id = $2', [nextTurn, gameId]);
+        }
       }
       
       await client.query('COMMIT');
