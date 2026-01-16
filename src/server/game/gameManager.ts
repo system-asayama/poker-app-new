@@ -255,18 +255,18 @@ export class GameManager {
         } else {
           await client.query('UPDATE games SET current_turn = $1 WHERE id = $2', [nextTurn, gameId]);
         }
+        
+        await client.query('COMMIT');
+        
+        // Emit game update via Socket.IO
+        if (this.io) {
+          this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+          console.log(`[Socket.IO] Emitted game-update for game ${gameId}`);
+        }
+        
+        // Trigger AI action if next player is AI
+        setTimeout(() => this.processAITurn(gameId, nextTurn), 1500);
       }
-      
-      await client.query('COMMIT');
-      
-      // Emit game update via Socket.IO
-      if (this.io) {
-        this.io.to(`game-${gameId}`).emit('game-update', { gameId });
-        console.log(`[Socket.IO] Emitted game-update for game ${gameId}`);
-      }
-      
-      // Trigger AI action if next player is AI
-      setTimeout(() => this.processAITurn(gameId, nextTurn), 1500);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
