@@ -156,6 +156,11 @@ export class GameManager {
       const gameResult = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
       const game = this.mapGame(gameResult.rows[0]);
       
+      // Prevent actions during showdown or finished game
+      if (game.currentPhase === 'showdown' || game.status === 'finished') {
+        throw new Error('Game is in showdown or finished, no actions allowed');
+      }
+      
       const playerResult = await client.query('SELECT * FROM game_players WHERE id = $1', [playerId]);
       const player = this.mapGamePlayer(playerResult.rows[0]);
       
@@ -175,11 +180,19 @@ export class GameManager {
           break;
           
         case 'check':
-          // No change
+          // Validate: can only check if current bet equals table bet
+          const currentBet = await this.getCurrentBet(gameId);
+          if (player.currentBet < currentBet) {
+            throw new Error('Cannot check, must call or raise');
+          }
           break;
           
         case 'call':
           const callAmount = await this.getCurrentBet(gameId) - player.currentBet;
+          // Validate: cannot call more than available chips
+          if (callAmount > player.chips) {
+            throw new Error('Insufficient chips to call, use all-in instead');
+          }
           newPlayerChips -= callAmount;
           newPlayerBet += callAmount;
           newPot += callAmount;
@@ -187,9 +200,22 @@ export class GameManager {
           
         case 'raise':
           const raiseAmount = amount;
-          newPlayerChips -= raiseAmount;
-          newPlayerBet += raiseAmount;
-          newPot += raiseAmount;
+          const currentTableBet = await this.getCurrentBet(gameId);
+          const totalNeeded = raiseAmount - player.currentBet;
+          
+          // Validate: raise amount must be greater than current bet
+          if (raiseAmount <= currentTableBet) {
+            throw new Error('Raise amount must be greater than current bet');
+          }
+          
+          // Validate: cannot raise more than available chips
+          if (totalNeeded > player.chips) {
+            throw new Error('Insufficient chips to raise, use all-in instead');
+          }
+          
+          newPlayerChips -= totalNeeded;
+          newPlayerBet += totalNeeded;
+          newPot += totalNeeded;
           break;
           
         case 'allin':
@@ -298,6 +324,12 @@ export class GameManager {
     
     const phaseOrder: GamePhase[] = ['preflop', 'flop', 'turn', 'river', 'showdown'];
     const currentIndex = phaseOrder.indexOf(game.currentPhase);
+    
+    // If we're at river, go directly to showdown and handle it
+    if (game.currentPhase === 'river') {
+      await this.handleShowdown(gameId, client);
+      return;
+    }
     
     if (currentIndex === -1 || currentIndex >= phaseOrder.length - 1) {
       // Game over
