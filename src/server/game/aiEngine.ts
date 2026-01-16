@@ -61,13 +61,15 @@ export class AIEngine {
     
     // Strong hand (> 0.6): call or small raise
     if (callAmount === 0) {
-      return Math.random() < 0.3 ? { action: 'raise', amount: gameState.pot * 0.3 } : { action: 'check', amount: 0 };
+      const raiseAmount = Math.min(gameState.pot * 0.3, gameState.playerChips);
+      return Math.random() < 0.3 ? { action: 'raise', amount: raiseAmount } : { action: 'check', amount: 0 };
     }
     
     if (Math.random() < 0.7) {
-      return { action: 'call', amount: callAmount };
+      return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
     } else {
-      return { action: 'raise', amount: callAmount + gameState.pot * 0.3 };
+      const raiseAmount = Math.min(callAmount + gameState.pot * 0.3, gameState.playerChips);
+      return { action: 'raise', amount: raiseAmount };
     }
   }
 
@@ -88,22 +90,25 @@ export class AIEngine {
     // Medium hand
     if (handStrength < 0.7) {
       if (callAmount === 0) {
-        return Math.random() < 0.4 ? { action: 'raise', amount: potSize * 0.5 } : { action: 'check', amount: 0 };
+        const raiseAmount = Math.min(potSize * 0.5, gameState.playerChips);
+        return Math.random() < 0.4 ? { action: 'raise', amount: raiseAmount } : { action: 'check', amount: 0 };
       }
       if (callAmount < potSize * 0.5) {
-        return { action: 'call', amount: callAmount };
+        return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
       }
-      return Math.random() < 0.3 ? { action: 'call', amount: callAmount } : { action: 'fold', amount: 0 };
+      return Math.random() < 0.3 ? { action: 'call', amount: Math.min(callAmount, gameState.playerChips) } : { action: 'fold', amount: 0 };
     }
     
     // Strong hand
     if (callAmount === 0) {
-      return { action: 'raise', amount: potSize * 0.7 };
+      const raiseAmount = Math.min(potSize * 0.7, gameState.playerChips);
+      return { action: 'raise', amount: raiseAmount };
     }
     if (Math.random() < 0.8) {
-      return { action: 'raise', amount: callAmount + potSize * 0.7 };
+      const raiseAmount = Math.min(callAmount + potSize * 0.7, gameState.playerChips);
+      return { action: 'raise', amount: raiseAmount };
     }
-    return { action: 'call', amount: callAmount };
+    return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
   }
 
   // Hard AI: Advanced strategy with position and aggression
@@ -120,7 +125,8 @@ export class AIEngine {
       if (callAmount === 0) {
         // Bluff occasionally in late position
         if (Math.random() < 0.15 && gameState.playersRemaining <= 3) {
-          return { action: 'raise', amount: potSize * 0.6 };
+          const raiseAmount = Math.min(potSize * 0.6, gameState.playerChips);
+          return { action: 'raise', amount: raiseAmount };
         }
         return { action: 'check', amount: 0 };
       }
@@ -130,7 +136,7 @@ export class AIEngine {
       }
       // Call small bets with pot odds
       if (potOdds > 3 && handStrength > 0.25) {
-        return { action: 'call', amount: callAmount };
+        return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
       }
       return { action: 'fold', amount: 0 };
     }
@@ -139,22 +145,25 @@ export class AIEngine {
     if (handStrength < 0.7) {
       if (callAmount === 0) {
         if (aggressionFactor > 0.6) {
-          return { action: 'raise', amount: potSize * (0.5 + aggressionFactor * 0.3) };
+          const raiseAmount = Math.min(potSize * (0.5 + aggressionFactor * 0.3), gameState.playerChips);
+          return { action: 'raise', amount: raiseAmount };
         }
-        return Math.random() < 0.5 ? { action: 'raise', amount: potSize * 0.5 } : { action: 'check', amount: 0 };
+        const raiseAmount = Math.min(potSize * 0.5, gameState.playerChips);
+        return Math.random() < 0.5 ? { action: 'raise', amount: raiseAmount } : { action: 'check', amount: 0 };
       }
       
       // Smart calling based on pot odds and hand strength
       if (callAmount < potSize * 0.6) {
         if (Math.random() < aggressionFactor) {
-          return { action: 'raise', amount: callAmount + potSize * 0.6 };
+          const raiseAmount = Math.min(callAmount + potSize * 0.6, gameState.playerChips);
+          return { action: 'raise', amount: raiseAmount };
         }
-        return { action: 'call', amount: callAmount };
+        return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
       }
       
       // Fold to large bets unless hand is strong enough
       if (handStrength > 0.6 && potOdds > 2) {
-        return { action: 'call', amount: callAmount };
+        return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
       }
       return { action: 'fold', amount: 0 };
     }
@@ -165,7 +174,8 @@ export class AIEngine {
       if (handStrength > 0.9 && Math.random() < 0.2 && !isLatePhase) {
         return { action: 'check', amount: 0 };
       }
-      return { action: 'raise', amount: potSize * (0.7 + aggressionFactor * 0.5) };
+      const raiseAmount = Math.min(potSize * (0.7 + aggressionFactor * 0.5), gameState.playerChips);
+      return { action: 'raise', amount: raiseAmount };
     }
     
     // Always raise with strong hands
@@ -176,7 +186,7 @@ export class AIEngine {
       );
       return { action: 'raise', amount: raiseAmount };
     }
-    return { action: 'call', amount: callAmount };
+    return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
   }
 
   // Calculate aggression factor based on game state
