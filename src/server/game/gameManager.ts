@@ -121,6 +121,18 @@ export class GameManager {
       );
       
       await client.query('COMMIT');
+      
+      // Process AI turn if the current player is AI
+      const currentPlayer = players[currentTurn];
+      if (currentPlayer.isAi) {
+        console.log('[startGame] Current player is AI, processing AI turn:', { id: currentPlayer.id, name: currentPlayer.aiName });
+        // Process AI turn after a short delay to simulate thinking
+        setTimeout(() => {
+          this.processAITurn(gameId, currentPlayer.id).catch(err => {
+            console.error('[startGame] Error processing AI turn:', err);
+          });
+        }, 2000);
+      }
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
