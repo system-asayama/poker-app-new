@@ -287,4 +287,32 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
   }
 });
 
+// Debug: Force AI turn (admin only)
+router.post('/:gameId/force-ai-turn', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const gameId = parseInt(req.params.gameId);
+    
+    // Get current game state
+    const gameResult = await query('SELECT current_turn FROM games WHERE id = $1', [gameId]);
+    if (gameResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    const currentTurn = gameResult.rows[0].current_turn;
+    if (!currentTurn) {
+      return res.status(400).json({ error: 'No current turn' });
+    }
+    
+    console.log(`[force-ai-turn] Forcing AI turn for game ${gameId}, player ${currentTurn}`);
+    
+    // Force process AI turn
+    await gameManager.processAITurn(gameId, currentTurn);
+    
+    res.json({ success: true, message: 'AI turn forced' });
+  } catch (error) {
+    console.error('Force AI turn error:', error);
+    res.status(500).json({ error: 'Failed to force AI turn', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
 export default router;
