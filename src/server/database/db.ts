@@ -18,7 +18,19 @@ export async function initializeDatabase() {
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     await pool.query(schema);
-    console.log('✅ Database initialized successfully');
+    console.log('✅ Database schema initialized successfully');
+    
+    // Run migrations for showdown feature
+    await pool.query(`
+      ALTER TABLE game_players 
+      ADD COLUMN IF NOT EXISTS hand_rank VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS hand_description VARCHAR(100)
+    `);
+    await pool.query(`
+      ALTER TABLE games 
+      ADD COLUMN IF NOT EXISTS winners TEXT
+    `);
+    console.log('✅ Showdown migrations applied successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
     throw error;
