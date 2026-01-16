@@ -8,13 +8,23 @@ const router = express.Router();
 // Create game
 router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { maxPlayers, isPrivate, invitedEmails } = req.body;
+    const { maxPlayers, isPrivate, invitedEmails, aiPlayers } = req.body;
     
     if (!maxPlayers || maxPlayers < 2 || maxPlayers > 9) {
       return res.status(400).json({ error: 'Max players must be between 2 and 9' });
     }
     
-    const game = await gameManager.createGame(maxPlayers, req.user!.id, isPrivate, invitedEmails);
+    // Validate AI players
+    if (aiPlayers) {
+      if (aiPlayers.count < 0 || aiPlayers.count > maxPlayers - 1) {
+        return res.status(400).json({ error: 'Invalid AI player count' });
+      }
+      if (!['easy', 'medium', 'hard'].includes(aiPlayers.difficulty)) {
+        return res.status(400).json({ error: 'Invalid AI difficulty' });
+      }
+    }
+    
+    const game = await gameManager.createGame(maxPlayers, req.user!.id, isPrivate, invitedEmails, aiPlayers);
     res.json({ game });
   } catch (error) {
     console.error('Create game error:', error);

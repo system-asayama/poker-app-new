@@ -40,13 +40,16 @@ export interface Game {
 export interface GamePlayer {
   id: number;
   gameId: number;
-  userId: number;
+  userId: number | null;
   position: number;
   chips: number;
   currentBet: number;
   holeCards: Card[];
   status: PlayerStatus;
   isDealer: boolean;
+  isAi?: boolean;
+  aiDifficulty?: 'easy' | 'medium' | 'hard';
+  aiName?: string;
   user?: User;
 }
 

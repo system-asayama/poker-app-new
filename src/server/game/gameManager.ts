@@ -2,9 +2,10 @@ import { query, getClient } from '../database/db.js';
 import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { evaluateHand, compareHands } from './handEvaluator.js';
 import { Game, GamePlayer, GamePhase, PlayerAction, Winner, Card } from '@shared/types.js';
+import { AIEngine, AIDifficulty } from './aiEngine.js';
 
 export class GameManager {
-  async createGame(maxPlayers: number, userId: number, isPrivate: boolean = false, invitedEmails: string[] = []): Promise<Game> {
+  async createGame(maxPlayers: number, userId: number, isPrivate: boolean = false, invitedEmails: string[] = [], aiPlayers?: { count: number; difficulty: AIDifficulty }): Promise<Game> {
     const roomCode = this.generateRoomCode();
     const deck = shuffleDeck(createDeck());
     
@@ -19,6 +20,13 @@ export class GameManager {
     
     // Add creator as first player
     await this.joinGame(game.id, userId, 0);
+    
+    // Add AI players if requested
+    if (aiPlayers && aiPlayers.count > 0) {
+      for (let i = 0; i < aiPlayers.count; i++) {
+        await this.addAIPlayer(game.id, i + 1, aiPlayers.difficulty);
+      }
+    }
     
     return game;
   }
@@ -184,6 +192,9 @@ export class GameManager {
       }
       
       await client.query('COMMIT');
+      
+      // Trigger AI action if next player is AI
+      setTimeout(() => this.processAITurn(gameId, nextTurn), 1500);
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -338,7 +349,74 @@ export class GameManager {
       currentBet: row.current_bet,
       holeCards: JSON.parse(row.hole_cards || '[]'),
       isDealer: row.is_dealer,
+      isAi: row.is_ai,
+      aiDifficulty: row.ai_difficulty,
+      aiName: row.ai_name,
     };
+  }
+  
+  async addAIPlayer(gameId: number, position: number, difficulty: AIDifficulty): Promise<GamePlayer> {
+    const aiName = AIEngine.generateAIName(difficulty, position - 1);
+    const startingChips = 1000;
+    
+    const result = await query(
+      `INSERT INTO game_players (game_id, user_id, position, chips, current_bet, hole_cards, status, is_dealer, is_ai, ai_difficulty, ai_name)
+       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [gameId, position, startingChips, 0, JSON.stringify([]), 'active', false, true, difficulty, aiName]
+    );
+    
+    return this.mapGamePlayer(result.rows[0]);
+  }
+  
+  async processAITurn(gameId: number, playerId: number): Promise<void> {
+    try {
+      // Check if player is AI
+      const playerResult = await query('SELECT * FROM game_players WHERE id = $1', [playerId]);
+      if (playerResult.rows.length === 0) return;
+      
+      const player = this.mapGamePlayer(playerResult.rows[0]);
+      if (!player.isAi) return;
+      
+      // Get game state
+      const gameResult = await query('SELECT * FROM games WHERE id = $1', [gameId]);
+      if (gameResult.rows.length === 0) return;
+      
+      const game = this.mapGame(gameResult.rows[0]);
+      
+      // Check if it's still this player's turn
+      if (game.currentTurn !== playerId) return;
+      
+      // Get current bet
+      const currentBet = await this.getCurrentBet(gameId);
+      
+      // Get active players count
+      const playersResult = await query(
+        'SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status = $2',
+        [gameId, 'active']
+      );
+      const playersRemaining = parseInt(playersResult.rows[0].count);
+      
+      // Create AI engine and decide action
+      const aiEngine = new AIEngine(player.aiDifficulty as AIDifficulty);
+      const gameState = {
+        pot: game.pot,
+        currentBet: currentBet,
+        playerChips: player.chips,
+        playerBet: player.currentBet,
+        communityCards: game.communityCards,
+        holeCards: player.holeCards,
+        phase: game.currentPhase,
+        playersRemaining: playersRemaining,
+      };
+      
+      const decision = aiEngine.decideAction(gameState);
+      
+      // Perform the action
+      await this.performAction(gameId, playerId, decision.action as PlayerAction, decision.amount);
+    } catch (error) {
+      console.error('AI turn error:', error);
+    }
   }
 }
 

@@ -119,10 +119,20 @@ export function Game() {
             <div className="grid grid-cols-3 gap-4 mb-6">
               {players.map((player) => (
                 <div key={player.id} className="bg-gray-700 rounded-lg p-4">
-                  <div className="font-bold">{player.user?.username}</div>
+                  <div className="font-bold flex items-center justify-center gap-2">
+                    {player.isAi && <span className="text-blue-400">🤖</span>}
+                    {player.isAi ? player.aiName : player.user?.username}
+                  </div>
                   <div className="text-sm text-gray-400">
                     {player.chips.toLocaleString()} チップ
                   </div>
+                  {player.isAi && (
+                    <div className="text-xs text-blue-400 mt-1">
+                      {player.aiDifficulty === 'easy' && '初級'}
+                      {player.aiDifficulty === 'medium' && '中級'}
+                      {player.aiDifficulty === 'hard' && '上級'}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -173,8 +183,9 @@ export function Game() {
                     style={{ left: `${x}%`, top: `${y}%` }}
                   >
                     <div className="bg-gray-800 rounded-lg p-3 min-w-[120px]">
-                      <div className="text-sm font-bold text-center mb-1">
-                        {player.user?.username}
+                      <div className="text-sm font-bold text-center mb-1 flex items-center justify-center gap-1">
+                        {player.isAi && <span className="text-blue-400">🤖</span>}
+                        {player.isAi ? player.aiName : player.user?.username}
                         {player.isDealer && ' 🎯'}
                       </div>
                       <div className="text-xs text-center text-gray-400 mb-2">

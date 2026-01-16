@@ -35,15 +35,17 @@ CREATE TABLE IF NOT EXISTS games (
 CREATE TABLE IF NOT EXISTS game_players (
   id SERIAL PRIMARY KEY,
   game_id INTEGER REFERENCES games(id) ON DELETE CASCADE,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   position INTEGER NOT NULL,
   chips INTEGER NOT NULL,
   current_bet INTEGER DEFAULT 0,
   hole_cards JSONB DEFAULT '[]',
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'folded', 'allin', 'out')),
   is_dealer BOOLEAN DEFAULT FALSE,
+  is_ai BOOLEAN DEFAULT FALSE,
+  ai_difficulty VARCHAR(20) CHECK (ai_difficulty IN ('easy', 'medium', 'hard')),
+  ai_name VARCHAR(100),
   joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(game_id, user_id),
   UNIQUE(game_id, position)
 );
 
