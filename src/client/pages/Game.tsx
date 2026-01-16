@@ -87,6 +87,13 @@ export function Game() {
   const isMyTurn = game.currentTurn === currentPlayer?.id;
   const currentBet = Math.max(...players.map(p => p.currentBet));
   
+  // Debug logging
+  console.log('[Game] Current turn:', game.currentTurn);
+  console.log('[Game] Current player:', currentPlayer);
+  console.log('[Game] Is my turn:', isMyTurn);
+  console.log('[Game] User:', user);
+  console.log('[Game] All players:', players.map(p => ({ id: p.id, userId: p.userId, isAi: p.isAi })));
+  
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
