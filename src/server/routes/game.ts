@@ -132,7 +132,7 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
     }
     
     const game = gameResult.rows[0];
-    game.communityCards = JSON.parse(game.community_cards || '[]');
+    game.communityCards = Array.isArray(game.community_cards) ? game.community_cards : [];
     delete game.deck; // Don't send deck to clients
     
     const playersResult = await query(
@@ -150,7 +150,7 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
         gameId: p.game_id,
         userId: p.user_id,
         currentBet: p.current_bet,
-        holeCards: JSON.parse(p.hole_cards || '[]'),
+        holeCards: Array.isArray(p.hole_cards) ? p.hole_cards : [],
         isDealer: p.is_dealer,
         user: {
           username: p.username,
@@ -200,7 +200,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     
     const games = result.rows.map(g => ({
       ...g,
-      communityCards: JSON.parse(g.community_cards || '[]'),
+      communityCards: Array.isArray(g.community_cards) ? g.community_cards : [],
       playerCount: parseInt(g.player_count),
     }));
     
@@ -222,8 +222,8 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
     }
     
     const game = gameResult.rows[0];
-    game.communityCards = JSON.parse(game.community_cards || '[]');
-    game.deck = JSON.parse(game.deck || '[]');
+    game.communityCards = Array.isArray(game.community_cards) ? game.community_cards : [];
+    game.deck = Array.isArray(game.deck) ? game.deck : [];
     
     const playersResult = await query(
       `SELECT gp.*, u.username, u.email 
@@ -239,7 +239,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       gameId: p.game_id,
       userId: p.user_id,
       currentBet: p.current_bet,
-      holeCards: JSON.parse(p.hole_cards || '[]'),
+      holeCards: Array.isArray(p.hole_cards) ? p.hole_cards : [],
       isDealer: p.is_dealer,
       user: {
         username: p.username,
