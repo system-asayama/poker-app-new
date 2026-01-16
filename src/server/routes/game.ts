@@ -138,7 +138,7 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
     const playersResult = await query(
       `SELECT gp.*, u.username, u.email 
        FROM game_players gp
-       JOIN users u ON gp.user_id = u.id
+       LEFT JOIN users u ON gp.user_id = u.id
        WHERE gp.game_id = $1
        ORDER BY gp.position`,
       [gameId]
@@ -153,7 +153,7 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
         holeCards: Array.isArray(p.hole_cards) ? p.hole_cards : [],
         isDealer: p.is_dealer,
         user: {
-          username: p.username,
+          username: p.is_ai ? p.ai_name : p.username,
           email: p.email,
         },
       };
@@ -228,7 +228,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
     const playersResult = await query(
       `SELECT gp.*, u.username, u.email 
        FROM game_players gp
-       JOIN users u ON gp.user_id = u.id
+       LEFT JOIN users u ON gp.user_id = u.id
        WHERE gp.game_id = $1
        ORDER BY gp.position`,
       [gameId]
@@ -242,7 +242,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       holeCards: Array.isArray(p.hole_cards) ? p.hole_cards : [],
       isDealer: p.is_dealer,
       user: {
-        username: p.username,
+        username: p.is_ai ? p.ai_name : p.username,
         email: p.email,
       },
     }));
