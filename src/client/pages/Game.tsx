@@ -394,7 +394,7 @@ export function Game() {
               </button>
             </div>
           </div>
-        )
+        )}
       </div>
     </div>
   );
