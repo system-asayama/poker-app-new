@@ -332,6 +332,9 @@ export class GameManager {
   }
   
   private mapGame(row: any): Game {
+    console.log('mapGame row:', JSON.stringify(row, null, 2));
+    console.log('community_cards type:', typeof row.community_cards, 'value:', row.community_cards);
+    console.log('deck type:', typeof row.deck, 'value:', row.deck);
     return {
       ...row,
       communityCards: (row.community_cards && row.community_cards !== '') ? JSON.parse(row.community_cards) : [],
