@@ -536,21 +536,38 @@ export class GameManager {
   
   async processAITurn(gameId: number, playerId: number): Promise<void> {
     try {
+      console.log(`[processAITurn] Starting for game ${gameId}, player ${playerId}`);
+      
       // Check if player is AI
       const playerResult = await query('SELECT * FROM game_players WHERE id = $1', [playerId]);
-      if (playerResult.rows.length === 0) return;
+      if (playerResult.rows.length === 0) {
+        console.log(`[processAITurn] Player ${playerId} not found`);
+        return;
+      }
       
       const player = this.mapGamePlayer(playerResult.rows[0]);
-      if (!player.isAi) return;
+      if (!player.isAi) {
+        console.log(`[processAITurn] Player ${playerId} is not AI`);
+        return;
+      }
+      
+      console.log(`[processAITurn] Player ${playerId} (${player.aiName}) is AI`);
       
       // Get game state
       const gameResult = await query('SELECT * FROM games WHERE id = $1', [gameId]);
-      if (gameResult.rows.length === 0) return;
+      if (gameResult.rows.length === 0) {
+        console.log(`[processAITurn] Game ${gameId} not found`);
+        return;
+      }
       
       const game = this.mapGame(gameResult.rows[0]);
+      console.log(`[processAITurn] Game state: phase=${game.currentPhase}, currentTurn=${game.currentTurn}, status=${game.status}`);
       
       // Check if it's still this player's turn
-      if (game.currentTurn !== playerId) return;
+      if (game.currentTurn !== playerId) {
+        console.log(`[processAITurn] Not player's turn. Current turn: ${game.currentTurn}, Player: ${playerId}`);
+        return;
+      }
       
       // Get current bet
       const currentBet = await this.getCurrentBet(gameId);
@@ -575,12 +592,15 @@ export class GameManager {
         playersRemaining: playersRemaining,
       };
       
+      console.log(`[processAITurn] AI deciding action with state:`, gameState);
       const decision = aiEngine.decideAction(gameState);
+      console.log(`[processAITurn] AI decided: ${decision.action}, amount: ${decision.amount}`);
       
       // Perform the action
       await this.performAction(gameId, playerId, decision.action as PlayerAction, decision.amount);
+      console.log(`[processAITurn] Action performed successfully`);
     } catch (error) {
-      console.error('AI turn error:', error);
+      console.error('[processAITurn] Error:', error);
     }
   }
 }
