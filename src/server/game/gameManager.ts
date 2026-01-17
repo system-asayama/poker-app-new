@@ -293,9 +293,11 @@ export class GameManager {
           
           // Trigger AI action if new current player is AI
           if (newCurrentTurn) {
-            setImmediate(() => {
-              setTimeout(() => this.processAITurn(gameId, newCurrentTurn), 1500);
-            });
+            setTimeout(() => {
+              this.processAITurn(gameId, newCurrentTurn).catch(err => {
+                console.error('[performAction] Error processing AI turn:', err);
+              });
+            }, 1500);
           }
         } else {
           await client.query('UPDATE games SET current_turn = $1 WHERE id = $2', [nextTurn, gameId]);
@@ -309,9 +311,11 @@ export class GameManager {
           }
           
           // Trigger AI action if next player is AI
-          setImmediate(() => {
-            setTimeout(() => this.processAITurn(gameId, nextTurn), 1500);
-          });
+          setTimeout(() => {
+            this.processAITurn(gameId, nextTurn).catch(err => {
+              console.error('[performAction] Error processing AI turn:', err);
+            });
+          }, 1500);
         }
       }
     } catch (error) {
