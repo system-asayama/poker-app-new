@@ -112,6 +112,16 @@ export function Game() {
             <div className="text-sm text-gray-400">
               フェーズ: {game.currentPhase}
             </div>
+            {game.maxHands && (
+              <div className="text-sm text-poker-gold mt-1">
+                ハンド: {game.currentHand}/{game.maxHands}
+              </div>
+            )}
+            {!game.maxHands && game.currentHand > 1 && (
+              <div className="text-sm text-poker-gold mt-1">
+                ハンド: {game.currentHand} (無制限)
+              </div>
+            )}
           </div>
           <div className="w-24"></div>
         </div>

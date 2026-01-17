@@ -33,6 +33,8 @@ export interface Game {
   currentTurn: number | null;
   smallBlind: number;
   bigBlind: number;
+  maxHands: number | null;
+  currentHand: number;
   createdAt: Date;
   updatedAt: Date;
 }
