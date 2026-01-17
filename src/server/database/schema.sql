@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS games (
   current_turn INTEGER,
   small_blind INTEGER DEFAULT 10,
   big_blind INTEGER DEFAULT 20,
+  max_hands INTEGER,
+  current_hand INTEGER DEFAULT 1,
   is_private BOOLEAN DEFAULT FALSE,
   host_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   invited_users JSONB DEFAULT '[]',

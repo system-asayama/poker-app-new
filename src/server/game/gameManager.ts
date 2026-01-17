@@ -11,15 +11,15 @@ export class GameManager {
   setIO(io: Server) {
     this.io = io;
   }
-  async createGame(maxPlayers: number, userId: number, isPrivate: boolean = false, invitedEmails: string[] = [], aiPlayers?: { count: number; difficulty: AIDifficulty }): Promise<Game> {
+  async createGame(maxPlayers: number, userId: number, isPrivate: boolean = false, invitedEmails: string[] = [], aiPlayers?: { count: number; difficulty: AIDifficulty }, maxHands?: number | null): Promise<Game> {
     const roomCode = this.generateRoomCode();
     const deck = shuffleDeck(createDeck());
     
     const result = await query(
-      `INSERT INTO games (room_code, max_players, status, current_phase, pot, community_cards, deck, dealer_position, small_blind, big_blind, is_private, host_id, invited_users)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO games (room_code, max_players, status, current_phase, pot, community_cards, deck, dealer_position, small_blind, big_blind, is_private, host_id, invited_users, max_hands, current_hand)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
-      [roomCode, maxPlayers, 'waiting', 'waiting', 0, JSON.stringify([]), JSON.stringify(deck), 0, 10, 20, isPrivate, userId, JSON.stringify(invitedEmails)]
+      [roomCode, maxPlayers, 'waiting', 'waiting', 0, JSON.stringify([]), JSON.stringify(deck), 0, 10, 20, isPrivate, userId, JSON.stringify(invitedEmails), maxHands, 1]
     );
     
     const game = this.mapGame(result.rows[0]);
@@ -509,9 +509,147 @@ export class GameManager {
     };
     
     await client.query(
-      'UPDATE games SET status = $1, current_phase = $2, current_turn = NULL, winners = $3 WHERE id = $4',
-      ['finished', 'showdown', JSON.stringify(winnerInfo), gameId]
+      'UPDATE games SET current_phase = $1, current_turn = NULL, winners = $2, pot = 0 WHERE id = $3',
+      ['showdown', JSON.stringify(winnerInfo), gameId]
     );
+    
+    // Check if we should start next hand or end game
+    await this.checkAndStartNextHand(gameId, client);
+  }
+  
+  private async checkAndStartNextHand(gameId: number, client: any): Promise<void> {
+    // Get game info
+    const gameResult = await client.query('SELECT max_hands, current_hand FROM games WHERE id = $1', [gameId]);
+    const game = gameResult.rows[0];
+    
+    // Remove players with 0 chips
+    await client.query(
+      "UPDATE game_players SET status = 'out' WHERE game_id = $1 AND chips = 0",
+      [gameId]
+    );
+    
+    // Check how many players are still in
+    const activePlayers = await client.query(
+      "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status != 'out'",
+      [gameId]
+    );
+    
+    const playerCount = parseInt(activePlayers.rows[0].count);
+    
+    // If only 1 player left, end game
+    if (playerCount <= 1) {
+      await client.query(
+        "UPDATE games SET status = 'finished' WHERE id = $1",
+        [gameId]
+      );
+      return;
+    }
+    
+    // Check if we've reached max hands
+    if (game.max_hands && game.current_hand >= game.max_hands) {
+      await client.query(
+        "UPDATE games SET status = 'finished' WHERE id = $1",
+        [gameId]
+      );
+      return;
+    }
+    
+    // Start next hand
+    await this.startNextHand(gameId, client);
+  }
+  
+  private async startNextHand(gameId: number, client: any): Promise<void> {
+    console.log('[startNextHand] Starting next hand for game', gameId);
+    
+    // Increment current_hand
+    await client.query(
+      'UPDATE games SET current_hand = current_hand + 1 WHERE id = $1',
+      [gameId]
+    );
+    
+    // Reset all active players
+    await client.query(
+      "UPDATE game_players SET current_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
+      [gameId]
+    );
+    
+    // Move dealer position
+    const gameResult = await client.query('SELECT dealer_position FROM games WHERE id = $1', [gameId]);
+    const currentDealer = gameResult.rows[0].dealer_position;
+    
+    const playersResult = await client.query(
+      "SELECT * FROM game_players WHERE game_id = $1 AND status != 'out' ORDER BY position",
+      [gameId]
+    );
+    const players = playersResult.rows;
+    
+    // Find next dealer
+    let nextDealerIndex = (currentDealer + 1) % players.length;
+    const nextDealer = players[nextDealerIndex].position;
+    
+    // Create new deck and shuffle
+    const deck = this.createDeck();
+    const shuffledDeck = this.shuffleDeck(deck);
+    
+    // Deal hole cards
+    const holeCards: Record<number, Card[]> = {};
+    let deckIndex = 0;
+    
+    for (let i = 0; i < 2; i++) {
+      for (const player of players) {
+        if (!holeCards[player.id]) holeCards[player.id] = [];
+        holeCards[player.id].push(shuffledDeck[deckIndex++]);
+      }
+    }
+    
+    // Update players with hole cards
+    for (const player of players) {
+      await client.query(
+        'UPDATE game_players SET hole_cards = $1 WHERE id = $2',
+        [JSON.stringify(holeCards[player.id]), player.id]
+      );
+    }
+    
+    // Post blinds
+    const smallBlindIndex = (nextDealerIndex + 1) % players.length;
+    const bigBlindIndex = (nextDealerIndex + 2) % players.length;
+    
+    const smallBlindPlayer = players[smallBlindIndex];
+    const bigBlindPlayer = players[bigBlindIndex];
+    
+    const gameInfo = await client.query('SELECT small_blind, big_blind FROM games WHERE id = $1', [gameId]);
+    const smallBlind = gameInfo.rows[0].small_blind;
+    const bigBlind = gameInfo.rows[0].big_blind;
+    
+    await client.query(
+      'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
+      [smallBlind, smallBlindPlayer.id]
+    );
+    
+    await client.query(
+      'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
+      [bigBlind, bigBlindPlayer.id]
+    );
+    
+    // First to act is after big blind
+    const firstToActIndex = (nextDealerIndex + 3) % players.length;
+    const firstToAct = players[firstToActIndex];
+    
+    // Update game state
+    const remainingDeck = shuffledDeck.slice(deckIndex);
+    await client.query(
+      "UPDATE games SET current_phase = 'preflop', dealer_position = $1, current_turn = $2, community_cards = '[]', deck = $3, pot = $4, winners = NULL WHERE id = $5",
+      [nextDealer, firstToAct.id, JSON.stringify(remainingDeck), smallBlind + bigBlind, gameId]
+    );
+    
+    console.log('[startNextHand] Next hand started, first to act:', firstToAct.id);
+    
+    // Trigger AI if first player is AI
+    if (firstToAct.is_ai) {
+      this.processAITurn(gameId, firstToAct.id).catch(err => {
+        console.error('[startNextHand] AI turn error:', err);
+      });
+    }
   }
   
   private getHandDescription(rank: string): string {

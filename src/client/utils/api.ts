@@ -54,8 +54,8 @@ export const api = {
   getGames: () =>
     fetchAPI('/games'),
   
-  createGame: (maxPlayers: number, isPrivate?: boolean, invitedEmails?: string[], aiPlayers?: { count: number; difficulty: string }) =>
-    fetchAPI('/games/create', { method: 'POST', body: { maxPlayers, isPrivate, invitedEmails, aiPlayers } }),
+  createGame: (maxPlayers: number, isPrivate?: boolean, invitedEmails?: string[], aiPlayers?: { count: number; difficulty: string }, maxHands?: number | null) =>
+    fetchAPI('/games/create', { method: 'POST', body: { maxPlayers, isPrivate, invitedEmails, aiPlayers, maxHands } }),
   
   joinGame: (gameId: number) =>
     fetchAPI(`/games/${gameId}/join`, { method: 'POST' }),

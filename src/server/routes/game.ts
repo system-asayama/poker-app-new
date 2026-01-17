@@ -8,7 +8,7 @@ const router = express.Router();
 // Create game
 router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { maxPlayers, isPrivate, invitedEmails, aiPlayers } = req.body;
+    const { maxPlayers, isPrivate, invitedEmails, aiPlayers, maxHands } = req.body;
     
     if (!maxPlayers || maxPlayers < 2 || maxPlayers > 9) {
       return res.status(400).json({ error: 'Max players must be between 2 and 9' });
@@ -24,7 +24,7 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       }
     }
     
-    const game = await gameManager.createGame(maxPlayers, req.user!.id, isPrivate, invitedEmails, aiPlayers);
+    const game = await gameManager.createGame(maxPlayers, req.user!.id, isPrivate, invitedEmails, aiPlayers, maxHands);
     res.json({ game });
   } catch (error) {
     console.error('Create game error:', error);

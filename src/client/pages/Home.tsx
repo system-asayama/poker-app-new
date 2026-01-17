@@ -24,6 +24,7 @@ export function Home() {
   const [addAI, setAddAI] = useState(false);
   const [aiCount, setAiCount] = useState(1);
   const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [maxHands, setMaxHands] = useState<number | null>(null);
   
   useEffect(() => {
     loadGames();
@@ -47,7 +48,7 @@ export function Home() {
       
       const aiPlayers = addAI ? { count: aiCount, difficulty: aiDifficulty } : undefined;
       
-      const { game } = await api.createGame(maxPlayers, isPrivate, emailList, aiPlayers);
+      const { game } = await api.createGame(maxPlayers, isPrivate, emailList, aiPlayers, maxHands);
       setLocation(`/game/${game.id}`);
     } catch (error: any) {
       alert(error.message || 'Failed to create game');
@@ -286,6 +287,72 @@ export function Home() {
                 </div>
               </>
             )}
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2">
+                ハンド数
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMaxHands(1)}
+                  className={`px-3 py-2 rounded-lg font-medium transition ${
+                    maxHands === 1
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMaxHands(3)}
+                  className={`px-3 py-2 rounded-lg font-medium transition ${
+                    maxHands === 3
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  3
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMaxHands(5)}
+                  className={`px-3 py-2 rounded-lg font-medium transition ${
+                    maxHands === 5
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMaxHands(10)}
+                  className={`px-3 py-2 rounded-lg font-medium transition ${
+                    maxHands === 10
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  10
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMaxHands(null)}
+                  className={`px-3 py-2 rounded-lg font-medium transition ${
+                    maxHands === null
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  無限
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                無限: 1人だけ残るまで続ける（トーナメント形式）
+              </p>
+            </div>
             
             <div className="flex gap-4">
               <button
