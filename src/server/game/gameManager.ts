@@ -132,11 +132,9 @@ export class GameManager {
       const currentPlayer = players[currentTurn];
       if (currentPlayer.isAi) {
         console.log('[startGame] Current player is AI, processing AI turn:', { id: currentPlayer.id, name: currentPlayer.aiName });
-        // Process AI turn immediately
-        setImmediate(() => {
-          this.processAITurn(gameId, currentPlayer.id).catch(err => {
-            console.error('[startGame] Error processing AI turn:', err);
-          });
+        // Call processAITurn without await to avoid blocking
+        this.processAITurn(gameId, currentPlayer.id).catch(err => {
+          console.error('[startGame] Error processing AI turn:', err);
         });
       }
     } catch (error) {
@@ -294,11 +292,9 @@ export class GameManager {
           // Trigger AI action if new current player is AI
           if (newCurrentTurn) {
             console.log(`[performAction] Triggering AI turn after phase advance for player ${newCurrentTurn}`);
-            // Use setImmediate to avoid blocking
-            setImmediate(() => {
-              this.processAITurn(gameId, newCurrentTurn).catch(err => {
-                console.error('[performAction] Error processing AI turn:', err);
-              });
+            // Call processAITurn without await to avoid blocking
+            this.processAITurn(gameId, newCurrentTurn).catch(err => {
+              console.error('[performAction] Error processing AI turn:', err);
             });
           }
         } else {
@@ -314,11 +310,9 @@ export class GameManager {
           
           // Trigger AI action if next player is AI
           console.log(`[performAction] Triggering AI turn for player ${nextTurn}`);
-          // Use setImmediate to avoid blocking
-          setImmediate(() => {
-            this.processAITurn(gameId, nextTurn).catch(err => {
-              console.error('[performAction] Error processing AI turn:', err);
-            });
+          // Call processAITurn without await to avoid blocking
+          this.processAITurn(gameId, nextTurn).catch(err => {
+            console.error('[performAction] Error processing AI turn:', err);
           });
         }
       }
