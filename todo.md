@@ -32,3 +32,7 @@
 - [x] handleShowdownで最大ハンド数到達時にゲームを終了させないように修正
 - [x] continueToNextHandで最大ハンド数到達を判定してゲームを終了するように修正
 - [x] 1人残りの場合のみhandleShowdownでゲームを終了
+
+## APIレスポンスにmaxHandsとcurrentHandが含まれていない問題
+- [x] game.tsのGET /:gameIdエンドポイントでmaxHandsとcurrentHandをレスポンスに追加
+- [x] winnersフィールドもレスポンスに追加

@@ -149,6 +149,9 @@ router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
       isPrivate: game.is_private,
       hostId: game.host_id,
       createdAt: game.created_at,
+      maxHands: game.max_hands,
+      currentHand: game.current_hand,
+      winners: game.winners,
     };
     
     const playersResult = await query(
