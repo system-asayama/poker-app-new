@@ -273,6 +273,22 @@ export class GameManager {
         // Move to next player
         const nextTurn = await this.getNextPlayer(gameId, playerId);
         
+        // If no active players (all-in situation), advance to showdown
+        if (nextTurn === null) {
+          console.log('[performAction] No active players, advancing to showdown');
+          // Auto-advance through remaining phases to showdown
+          await this.autoAdvanceToShowdown(gameId, client);
+          
+          await client.query('COMMIT');
+          
+          // Emit game update via Socket.IO
+          if (this.io) {
+            this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+            console.log(`[Socket.IO] Emitted game-update for game ${gameId}`);
+          }
+          return;
+        }
+        
         // Check if betting round is complete
         if (await this.isBettingRoundComplete(gameId)) {
           await this.advancePhase(gameId, client);
@@ -324,6 +340,44 @@ export class GameManager {
     }
   }
   
+  private async autoAdvanceToShowdown(gameId: number, client: any): Promise<void> {
+    console.log('[autoAdvanceToShowdown] Starting auto-advance to showdown');
+    
+    const gameResult = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
+    const game = this.mapGame(gameResult.rows[0]);
+    
+    const phaseOrder: GamePhase[] = ['preflop', 'flop', 'turn', 'river', 'showdown'];
+    const currentIndex = phaseOrder.indexOf(game.currentPhase);
+    
+    let deck = game.deck;
+    let communityCards = game.communityCards;
+    
+    // Auto-deal remaining community cards
+    for (let i = currentIndex + 1; i < phaseOrder.length - 1; i++) {
+      const phase = phaseOrder[i];
+      console.log(`[autoAdvanceToShowdown] Auto-dealing for phase: ${phase}`);
+      
+      if (phase === 'flop' && communityCards.length === 0) {
+        const { cards, remainingDeck } = dealCards(deck, 3);
+        communityCards = [...communityCards, ...cards];
+        deck = remainingDeck;
+      } else if ((phase === 'turn' || phase === 'river') && communityCards.length < 5) {
+        const { cards, remainingDeck } = dealCards(deck, 1);
+        communityCards = [...communityCards, cards[0]];
+        deck = remainingDeck;
+      }
+    }
+    
+    // Update game with all community cards
+    await client.query(
+      'UPDATE games SET community_cards = $1, deck = $2, current_phase = $3, current_turn = NULL WHERE id = $4',
+      [JSON.stringify(communityCards), JSON.stringify(deck), 'river', gameId]
+    );
+    
+    // Proceed to showdown
+    await this.handleShowdown(gameId, client);
+  }
+  
   private async advancePhase(gameId: number, client: any): Promise<void> {
     const gameResult = await client.query('SELECT * FROM games WHERE id = $1', [gameId]);
     const game = this.mapGame(gameResult.rows[0]);
@@ -361,13 +415,30 @@ export class GameManager {
     // Reset bets
     await client.query('UPDATE game_players SET current_bet = 0 WHERE game_id = $1', [gameId]);
     
-    // Get first active player (including allin players)
+    // Get first active player (only status='active', not 'allin')
     const playersResult = await client.query(
-      "SELECT id FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin') ORDER BY position LIMIT 1",
+      "SELECT id FROM game_players WHERE game_id = $1 AND status = 'active' ORDER BY position LIMIT 1",
       [gameId]
     );
     
     const nextTurn = playersResult.rows[0]?.id || null;
+    
+    // If no active players (all-in situation), auto-advance to showdown
+    if (nextTurn === null) {
+      console.log('[advancePhase] No active players, auto-advancing to showdown');
+      await client.query(
+        'UPDATE games SET current_phase = $1, community_cards = $2, deck = $3, current_turn = NULL WHERE id = $4',
+        [nextPhase, JSON.stringify(communityCards), JSON.stringify(deck), gameId]
+      );
+      // Continue to next phase or showdown
+      if (nextPhase === 'river') {
+        await this.handleShowdown(gameId, client);
+      } else {
+        // Recursively advance to next phase
+        await this.advancePhase(gameId, client);
+      }
+      return;
+    }
     
     await client.query(
       'UPDATE games SET current_phase = $1, community_cards = $2, deck = $3, current_turn = $4 WHERE id = $5',
@@ -465,7 +536,7 @@ export class GameManager {
     return result.rows[0].max_bet || 0;
   }
   
-  private async getNextPlayer(gameId: number, currentPlayerId: number): Promise<number> {
+  private async getNextPlayer(gameId: number, currentPlayerId: number): Promise<number | null> {
     const result = await query(
       `SELECT id FROM game_players 
        WHERE game_id = $1 AND status = 'active' AND position > (SELECT position FROM game_players WHERE id = $2)
@@ -483,7 +554,8 @@ export class GameManager {
       [gameId]
     );
     
-    return wrapResult.rows[0].id;
+    // Return null if no active players (all-in situation)
+    return wrapResult.rows.length > 0 ? wrapResult.rows[0].id : null;
   }
   
   private async isBettingRoundComplete(gameId: number): Promise<boolean> {
