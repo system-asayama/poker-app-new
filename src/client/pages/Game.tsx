@@ -70,7 +70,9 @@ export function Game() {
   async function handleContinueToNextHand() {
     try {
       await api.continueToNextHand(gameId);
-      await loadGameState();
+      // Don't immediately load game state - let Socket.IO handle it
+      // This prevents race conditions where we load state before server finishes processing
+      // The 'game-update' event will trigger loadGameState() automatically
     } catch (error: any) {
       alert(error.message || 'Failed to continue to next hand');
     }

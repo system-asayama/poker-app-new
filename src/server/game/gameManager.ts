@@ -628,6 +628,10 @@ export class GameManager {
       
       await client.query('COMMIT');
       
+      // Wait a bit for AI processing to complete before emitting update
+      // This prevents race conditions where frontend loads state before AI finishes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Emit game update
       if (this.io) {
         this.io.to(`game-${gameId}`).emit('game-update', { gameId });
