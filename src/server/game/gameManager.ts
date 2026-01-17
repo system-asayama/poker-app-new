@@ -491,24 +491,39 @@ export class GameManager {
     const gameResult = await query('SELECT current_phase, current_turn, dealer_position FROM games WHERE id = $1', [gameId]);
     const { current_phase: currentPhase, current_turn: currentTurn, dealer_position: dealerPosition } = gameResult.rows[0];
     
-    // Get all active players
+    // Get all non-folded players (active or allin)
     const playersResult = await query(
-      `SELECT id, current_bet FROM game_players 
-       WHERE game_id = $1 AND status = 'active'
+      `SELECT id, current_bet, chips, status FROM game_players 
+       WHERE game_id = $1 AND status IN ('active', 'allin')
        ORDER BY position`,
       [gameId]
     );
     
-    const activePlayers = playersResult.rows;
-    const active_count = activePlayers.length;
+    const allPlayers = playersResult.rows;
+    const total_count = allPlayers.length;
     
-    if (active_count === 0) {
-      return true; // No active players, round is complete
+    if (total_count === 0) {
+      return true; // No players left, round is complete
     }
     
-    // Check if all active players have the same bet
-    const bets = activePlayers.map(p => parseInt(p.current_bet));
-    const allBetsEqual = bets.every(bet => bet === bets[0]);
+    // Get players who can still act (chips > 0 and not allin)
+    const actionablePlayers = allPlayers.filter(p => p.status === 'active' && parseInt(p.chips) > 0);
+    const actionable_count = actionablePlayers.length;
+    
+    // If no one can act, round is complete (all-in situation)
+    if (actionable_count === 0) {
+      console.log('[isBettingRoundComplete] All players all-in or out of chips', {
+        gameId,
+        currentPhase,
+        total_count,
+        actionable_count
+      });
+      return true;
+    }
+    
+    // Check if all actionable players have matching bets
+    const actionableBets = actionablePlayers.map(p => parseInt(p.current_bet));
+    const allBetsEqual = actionableBets.length === 0 || actionableBets.every(bet => bet === actionableBets[0]);
     
     if (!allBetsEqual) {
       return false; // Not all bets are equal
@@ -566,12 +581,13 @@ export class GameManager {
       [gameId, currentPhase]
     );
     
-    // If there was a raise/bet, check if all active players have acted AFTER it
+    // If there was a raise/bet, check if all actionable players have acted AFTER it
     if (lastRaiseResult.rows.length > 0) {
       const lastRaiseTime = lastRaiseResult.rows[0].created_at;
       const lastRaisePlayerId = lastRaiseResult.rows[0].player_id;
       
-      // Check if all active players (except folded) have acted after the last raise
+      // Check if all actionable players have acted after the last raise
+      const actionablePlayerIds = actionablePlayers.map(p => p.id);
       const actionsAfterRaiseResult = await query(
         `SELECT COUNT(DISTINCT player_id) as players_acted_after_raise
          FROM game_actions
@@ -582,14 +598,15 @@ export class GameManager {
       
       const playersActedAfterRaise = parseInt(actionsAfterRaiseResult.rows[0].players_acted_after_raise);
       
-      // All active players except the raiser must have acted after the raise
-      const requiredActions = active_count - 1;
+      // All actionable players except the raiser must have acted after the raise
+      const requiredActions = actionable_count - (actionablePlayerIds.includes(lastRaisePlayerId) ? 1 : 0);
       const isComplete = playersActedAfterRaise >= requiredActions;
       
       console.log('[isBettingRoundComplete] After raise', { 
         gameId, 
         currentPhase,
-        active_count,
+        total_count,
+        actionable_count,
         lastRaisePlayerId,
         playersActedAfterRaise,
         requiredActions,
@@ -600,23 +617,29 @@ export class GameManager {
       return isComplete;
     }
     
-    // No raise/bet in this phase, just check if all players have acted
+    // No raise/bet in this phase, just check if all actionable players have acted
+    const actionablePlayerIds = actionablePlayers.map(p => p.id);
+    if (actionablePlayerIds.length === 0) {
+      return true; // No one can act
+    }
+    
     const actionResult = await query(
       `SELECT COUNT(DISTINCT player_id) as players_acted
        FROM game_actions
        WHERE game_id = $1 AND phase = $2
-         AND player_id IN (SELECT id FROM game_players WHERE game_id = $1 AND status = 'active')`,
-      [gameId, currentPhase]
+         AND player_id = ANY($3)`,
+      [gameId, currentPhase, actionablePlayerIds]
     );
     
     const players_acted = parseInt(actionResult.rows[0].players_acted);
-    const allPlayersActed = players_acted === active_count;
+    const allPlayersActed = players_acted === actionable_count;
     const isComplete = allBetsEqual && allPlayersActed;
     
     console.log('[isBettingRoundComplete] No raise', { 
       gameId, 
       currentPhase,
-      active_count,
+      total_count,
+      actionable_count,
       players_acted,
       allPlayersActed,
       allBetsEqual,
