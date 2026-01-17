@@ -173,7 +173,7 @@ function countRanks(cards: Card[]): { rank: Rank; count: number }[] {
 
 function getHighCardValue(cards: Card[]): number {
   return cards.reduce((sum, card, index) => {
-    return sum + rankValues[card.rank] * Math.pow(100, 4 - index);
+    return sum + rankValues[card.rank] * Math.pow(15, 4 - index);
   }, 0);
 }
 
