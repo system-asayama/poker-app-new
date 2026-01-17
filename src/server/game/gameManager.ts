@@ -582,8 +582,17 @@ export class GameManager {
       
       const playerCount = parseInt(activePlayers.rows[0].count);
       
+      console.log('[continueToNextHand] Debug:', {
+        gameId,
+        currentHand: game.current_hand,
+        maxHands: game.max_hands,
+        playerCount,
+        status: game.status
+      });
+      
       // If only 1 player left, end game
       if (playerCount <= 1) {
+        console.log('[continueToNextHand] Ending game: only 1 player left');
         await client.query(
           "UPDATE games SET status = 'finished' WHERE id = $1",
           [gameId]
@@ -599,6 +608,7 @@ export class GameManager {
       
       // Check if we've reached max hands
       if (game.max_hands && game.current_hand >= game.max_hands) {
+        console.log('[continueToNextHand] Ending game: max hands reached');
         await client.query(
           "UPDATE games SET status = 'finished' WHERE id = $1",
           [gameId]
@@ -613,6 +623,7 @@ export class GameManager {
       }
       
       // Start next hand
+      console.log('[continueToNextHand] Starting next hand');
       await this.startNextHand(gameId, client);
       
       await client.query('COMMIT');

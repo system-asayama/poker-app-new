@@ -41,3 +41,8 @@
 - [x] Game.tsxにデバッグログを追加してgame.statusとgame.currentPhaseを確認
 - [x] 条件を一時的に緩和してボタンを強制表示
 - [x] handleContinueToNextHandが正しく呼び出されるか確認
+
+## continueToNextHandでゲームが誤って終了する問題
+- [x] continueToNextHandにデバッグログを追加
+- [x] playerCountとgame.current_handの値を確認
+- [x] ゲーム終了条件を再確認
