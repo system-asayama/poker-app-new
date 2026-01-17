@@ -132,12 +132,12 @@ export class GameManager {
       const currentPlayer = players[currentTurn];
       if (currentPlayer.isAi) {
         console.log('[startGame] Current player is AI, processing AI turn:', { id: currentPlayer.id, name: currentPlayer.aiName });
-        // Process AI turn after a short delay to simulate thinking
-        setTimeout(() => {
+        // Process AI turn immediately
+        setImmediate(() => {
           this.processAITurn(gameId, currentPlayer.id).catch(err => {
             console.error('[startGame] Error processing AI turn:', err);
           });
-        }, 2000);
+        });
       }
     } catch (error) {
       await client.query('ROLLBACK');
@@ -293,13 +293,13 @@ export class GameManager {
           
           // Trigger AI action if new current player is AI
           if (newCurrentTurn) {
-            console.log(`[performAction] Scheduling AI turn after phase advance for player ${newCurrentTurn} in 1.5 seconds`);
-            setTimeout(() => {
-              console.log(`[performAction] setTimeout fired after phase advance, calling processAITurn for player ${newCurrentTurn}`);
+            console.log(`[performAction] Triggering AI turn after phase advance for player ${newCurrentTurn}`);
+            // Use setImmediate to avoid blocking
+            setImmediate(() => {
               this.processAITurn(gameId, newCurrentTurn).catch(err => {
                 console.error('[performAction] Error processing AI turn:', err);
               });
-            }, 1500);
+            });
           }
         } else {
           await client.query('UPDATE games SET current_turn = $1 WHERE id = $2', [nextTurn, gameId]);
@@ -313,13 +313,13 @@ export class GameManager {
           }
           
           // Trigger AI action if next player is AI
-          console.log(`[performAction] Scheduling AI turn for player ${nextTurn} in 1.5 seconds`);
-          setTimeout(() => {
-            console.log(`[performAction] setTimeout fired, calling processAITurn for player ${nextTurn}`);
+          console.log(`[performAction] Triggering AI turn for player ${nextTurn}`);
+          // Use setImmediate to avoid blocking
+          setImmediate(() => {
             this.processAITurn(gameId, nextTurn).catch(err => {
               console.error('[performAction] Error processing AI turn:', err);
             });
-          }, 1500);
+          });
         }
       }
     } catch (error) {
