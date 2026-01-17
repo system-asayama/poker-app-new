@@ -293,7 +293,9 @@ export class GameManager {
           
           // Trigger AI action if new current player is AI
           if (newCurrentTurn) {
+            console.log(`[performAction] Scheduling AI turn after phase advance for player ${newCurrentTurn} in 1.5 seconds`);
             setTimeout(() => {
+              console.log(`[performAction] setTimeout fired after phase advance, calling processAITurn for player ${newCurrentTurn}`);
               this.processAITurn(gameId, newCurrentTurn).catch(err => {
                 console.error('[performAction] Error processing AI turn:', err);
               });
@@ -311,7 +313,9 @@ export class GameManager {
           }
           
           // Trigger AI action if next player is AI
+          console.log(`[performAction] Scheduling AI turn for player ${nextTurn} in 1.5 seconds`);
           setTimeout(() => {
+            console.log(`[performAction] setTimeout fired, calling processAITurn for player ${nextTurn}`);
             this.processAITurn(gameId, nextTurn).catch(err => {
               console.error('[performAction] Error processing AI turn:', err);
             });
