@@ -588,8 +588,7 @@ export class GameManager {
     const nextDealer = players[nextDealerIndex].position;
     
     // Create new deck and shuffle
-    const deck = this.createDeck();
-    const shuffledDeck = this.shuffleDeck(deck);
+    const shuffledDeck = shuffleDeck(createDeck());
     
     // Deal hole cards
     const holeCards: Record<number, Card[]> = {};
