@@ -36,3 +36,8 @@
 ## APIレスポンスにmaxHandsとcurrentHandが含まれていない問題
 - [x] game.tsのGET /:gameIdエンドポイントでmaxHandsとcurrentHandをレスポンスに追加
 - [x] winnersフィールドもレスポンスに追加
+
+## 「次のハンドへ」ボタンが表示されない問題（デバッグ）
+- [x] Game.tsxにデバッグログを追加してgame.statusとgame.currentPhaseを確認
+- [x] 条件を一時的に緩和してボタンを強制表示
+- [x] handleContinueToNextHandが正しく呼び出されるか確認

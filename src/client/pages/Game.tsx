@@ -461,6 +461,9 @@ export function Game() {
             </div>
             
             <div className="text-center space-y-4">
+              {/* Debug info */}
+              {console.log('Game state:', { phase: game.currentPhase, status: game.status, maxHands: game.maxHands, currentHand: game.currentHand })}
+              
               {game.currentPhase === 'showdown' && game.status !== 'finished' && (
                 <div>
                   <button
@@ -481,6 +484,21 @@ export function Game() {
                 >
                   ホームに戻る
                 </button>
+              )}
+              
+              {/* Temporary debug button - always show */}
+              {game.currentPhase === 'showdown' && game.status === 'finished' && (
+                <div className="mt-4 p-4 bg-red-900/50 border border-red-500 rounded">
+                  <div className="text-sm text-red-300 mb-2">
+                    Debug: Game is finished but showing continue button
+                  </div>
+                  <button
+                    onClick={handleContinueToNextHand}
+                    className="btn btn-secondary text-xl px-8 py-4"
+                  >
+                    [DEBUG] 次のハンドへ →
+                  </button>
+                </div>
               )}
             </div>
           </div>
