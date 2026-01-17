@@ -69,6 +69,9 @@ export const api = {
   performAction: (gameId: number, action: string, amount?: number) =>
     fetchAPI(`/games/${gameId}/action`, { method: 'POST', body: { action, amount } }),
   
+  continueToNextHand: (gameId: number) =>
+    fetchAPI(`/games/${gameId}/continue`, { method: 'POST' }),
+  
   // Admin
   getAdminGameState: (gameId: number) =>
     fetchAPI(`/games/${gameId}/admin`),

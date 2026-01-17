@@ -307,6 +307,39 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
   }
 });
 
+// Continue to next hand
+router.post('/:gameId/continue', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const gameId = parseInt(req.params.gameId);
+    
+    // Get game state
+    const gameResult = await query('SELECT current_phase, status FROM games WHERE id = $1', [gameId]);
+    if (gameResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    const game = gameResult.rows[0];
+    
+    // Only allow continuing from showdown phase
+    if (game.current_phase !== 'showdown') {
+      return res.status(400).json({ error: 'Can only continue from showdown phase' });
+    }
+    
+    // Check if game is already finished
+    if (game.status === 'finished') {
+      return res.status(400).json({ error: 'Game is already finished' });
+    }
+    
+    // Start next hand
+    await gameManager.continueToNextHand(gameId);
+    
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Continue to next hand error:', error);
+    res.status(500).json({ error: error.message || 'Failed to continue to next hand' });
+  }
+});
+
 // Debug: Force AI turn (admin only)
 router.post('/:gameId/force-ai-turn', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
   try {

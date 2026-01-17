@@ -67,6 +67,15 @@ export function Game() {
     }
   }
   
+  async function handleContinueToNextHand() {
+    try {
+      await api.continueToNextHand(gameId);
+      await loadGameState();
+    } catch (error: any) {
+      alert(error.message || 'Failed to continue to next hand');
+    }
+  }
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -251,6 +260,13 @@ export function Game() {
                   </div>
                 </div>
                 
+                {currentPlayer.status === 'folded' && (
+                  <div className="text-center">
+                    <div className="text-red-400 text-lg font-bold mb-2">フォールド済み</div>
+                    <div className="text-gray-400">ゲームの進行を観戦しています...</div>
+                  </div>
+                )}
+                
                 {isMyTurn && currentPlayer.status === 'active' && (
                   <div className="space-y-4">
                     <div className="flex gap-2">
@@ -309,7 +325,7 @@ export function Game() {
                   </div>
                 )}
                 
-                {!isMyTurn && (
+                {!isMyTurn && currentPlayer.status === 'active' && (
                   <div className="text-center text-gray-400">
                     他のプレイヤーのターンを待っています...
                   </div>
@@ -444,13 +460,28 @@ export function Game() {
               })}
             </div>
             
-            <div className="text-center">
-              <button
-                onClick={() => setLocation('/')}
-                className="btn btn-primary"
-              >
-                ホームに戻る
-              </button>
+            <div className="text-center space-y-4">
+              {game.currentPhase === 'showdown' && game.status !== 'finished' && (
+                <div>
+                  <button
+                    onClick={handleContinueToNextHand}
+                    className="btn btn-primary text-xl px-8 py-4"
+                  >
+                    次のハンドへ →
+                  </button>
+                  <div className="text-sm text-gray-400 mt-2">
+                    {game.maxHands ? `ハンド ${game.currentHand}/${game.maxHands} 完了` : `ハンド ${game.currentHand} 完了`}
+                  </div>
+                </div>
+              )}
+              {game.status === 'finished' && (
+                <button
+                  onClick={() => setLocation('/')}
+                  className="btn btn-primary"
+                >
+                  ホームに戻る
+                </button>
+              )}
             </div>
           </div>
         )}

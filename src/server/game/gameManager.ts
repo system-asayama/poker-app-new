@@ -524,8 +524,108 @@ export class GameManager {
       ['showdown', JSON.stringify(winnerInfo), gameId]
     );
     
-    // Check if we should start next hand or end game
-    await this.checkAndStartNextHand(gameId, client);
+    // Set a flag to indicate hand is complete and waiting for next hand
+    // Don't automatically start next hand - wait for user action
+    const gameInfoResult = await client.query('SELECT max_hands, current_hand FROM games WHERE id = $1', [gameId]);
+    const gameInfo = gameInfoResult.rows[0];
+    
+    // Remove players with 0 chips
+    await client.query(
+      "UPDATE game_players SET status = 'out' WHERE game_id = $1 AND chips = 0",
+      [gameId]
+    );
+    
+    // Check how many players are still in
+    const activePlayersResult = await client.query(
+      "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status != 'out'",
+      [gameId]
+    );
+    
+    const playerCount = parseInt(activePlayersResult.rows[0].count);
+    
+    // If only 1 player left or max hands reached, end game
+    if (playerCount <= 1 || (gameInfo.max_hands && gameInfo.current_hand >= gameInfo.max_hands)) {
+      await client.query(
+        "UPDATE games SET status = 'finished' WHERE id = $1",
+        [gameId]
+      );
+    }
+    // Otherwise, stay in showdown phase and wait for user to continue
+  }
+  
+  async continueToNextHand(gameId: number): Promise<void> {
+    const client = await getClient();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Get game info
+      const gameResult = await client.query('SELECT max_hands, current_hand, status FROM games WHERE id = $1', [gameId]);
+      const game = gameResult.rows[0];
+      
+      if (game.status === 'finished') {
+        throw new Error('Game is already finished');
+      }
+      
+      // Remove players with 0 chips
+      await client.query(
+        "UPDATE game_players SET status = 'out' WHERE game_id = $1 AND chips = 0",
+        [gameId]
+      );
+      
+      // Check how many players are still in
+      const activePlayers = await client.query(
+        "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status != 'out'",
+        [gameId]
+      );
+      
+      const playerCount = parseInt(activePlayers.rows[0].count);
+      
+      // If only 1 player left, end game
+      if (playerCount <= 1) {
+        await client.query(
+          "UPDATE games SET status = 'finished' WHERE id = $1",
+          [gameId]
+        );
+        await client.query('COMMIT');
+        
+        // Emit game update
+        if (this.io) {
+          this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+        }
+        return;
+      }
+      
+      // Check if we've reached max hands
+      if (game.max_hands && game.current_hand >= game.max_hands) {
+        await client.query(
+          "UPDATE games SET status = 'finished' WHERE id = $1",
+          [gameId]
+        );
+        await client.query('COMMIT');
+        
+        // Emit game update
+        if (this.io) {
+          this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+        }
+        return;
+      }
+      
+      // Start next hand
+      await this.startNextHand(gameId, client);
+      
+      await client.query('COMMIT');
+      
+      // Emit game update
+      if (this.io) {
+        this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+      }
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
   
   private async checkAndStartNextHand(gameId: number, client: any): Promise<void> {
