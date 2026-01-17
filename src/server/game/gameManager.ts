@@ -267,12 +267,6 @@ export class GameManager {
             'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
             [newPot, winner.id]
           );
-          
-          // Record win action
-          await client.query(
-            'INSERT INTO game_actions (game_id, player_id, action, amount, phase) VALUES ($1, $2, $3, $4, $5)',
-            [gameId, winner.id, 'win', newPot, game.currentPhase]
-          );
         }
         
         // End game
