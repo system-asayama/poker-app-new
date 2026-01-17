@@ -194,6 +194,10 @@ export class GameManager {
           newPlayerChips -= callAmount;
           newPlayerBet += callAmount;
           newPot += callAmount;
+          // If chips become 0, mark as all-in
+          if (newPlayerChips === 0) {
+            newStatus = 'allin';
+          }
           break;
           
         case 'raise':
@@ -214,6 +218,10 @@ export class GameManager {
           newPlayerChips -= totalNeeded;
           newPlayerBet += totalNeeded;
           newPot += totalNeeded;
+          // If chips become 0, mark as all-in
+          if (newPlayerChips === 0) {
+            newStatus = 'allin';
+          }
           break;
           
         case 'allin':
