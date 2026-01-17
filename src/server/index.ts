@@ -10,6 +10,7 @@ import { initializeDatabase } from './database/db.js';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import usersRoutes from './routes/users.js';
+import migrateRoutes from './routes/migrate.js';
 import { gameManager } from './game/gameManager.js';
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/migrate', migrateRoutes);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
