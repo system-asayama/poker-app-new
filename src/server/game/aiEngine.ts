@@ -61,14 +61,22 @@ export class AIEngine {
     
     // Strong hand (> 0.6): call or small raise
     if (callAmount === 0) {
-      const raiseAmount = Math.min(gameState.playerBet + gameState.pot * 0.3, gameState.playerChips);
+      const minRaise = gameState.currentBet + Math.max(gameState.pot * 0.2, 20);
+      const raiseAmount = Math.min(
+        Math.max(minRaise, gameState.playerBet + gameState.pot * 0.3),
+        gameState.playerChips
+      );
       return Math.random() < 0.3 ? { action: 'raise', amount: raiseAmount } : { action: 'check', amount: 0 };
     }
     
     if (Math.random() < 0.7) {
       return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
     } else {
-      const raiseAmount = Math.min(gameState.playerBet + callAmount + gameState.pot * 0.3, gameState.playerChips);
+      const minRaise = gameState.currentBet + Math.max(gameState.pot * 0.2, 20);
+      const raiseAmount = Math.min(
+        Math.max(minRaise, gameState.playerBet + callAmount + gameState.pot * 0.3),
+        gameState.playerChips
+      );
       return { action: 'raise', amount: raiseAmount };
     }
   }
@@ -90,7 +98,11 @@ export class AIEngine {
     // Medium hand
     if (handStrength < 0.7) {
       if (callAmount === 0) {
-        const raiseAmount = Math.min(gameState.playerBet + potSize * 0.5, gameState.playerChips);
+        const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+        const raiseAmount = Math.min(
+          Math.max(minRaise, gameState.playerBet + potSize * 0.5),
+          gameState.playerChips
+        );
         return Math.random() < 0.4 ? { action: 'raise', amount: raiseAmount } : { action: 'check', amount: 0 };
       }
       if (callAmount < potSize * 0.5) {
@@ -101,11 +113,19 @@ export class AIEngine {
     
     // Strong hand
     if (callAmount === 0) {
-      const raiseAmount = Math.min(gameState.playerBet + potSize * 0.7, gameState.playerChips);
+      const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+      const raiseAmount = Math.min(
+        Math.max(minRaise, gameState.playerBet + potSize * 0.7),
+        gameState.playerChips
+      );
       return { action: 'raise', amount: raiseAmount };
     }
     if (Math.random() < 0.8) {
-      const raiseAmount = Math.min(gameState.playerBet + callAmount + potSize * 0.7, gameState.playerChips);
+      const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+      const raiseAmount = Math.min(
+        Math.max(minRaise, gameState.playerBet + callAmount + potSize * 0.7),
+        gameState.playerChips
+      );
       return { action: 'raise', amount: raiseAmount };
     }
     return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
@@ -125,7 +145,11 @@ export class AIEngine {
       if (callAmount === 0) {
         // Bluff occasionally in late position
         if (Math.random() < 0.15 && gameState.playersRemaining <= 3) {
-          const raiseAmount = Math.min(gameState.playerBet + potSize * 0.6, gameState.playerChips);
+          const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+          const raiseAmount = Math.min(
+            Math.max(minRaise, gameState.playerBet + potSize * 0.6),
+            gameState.playerChips
+          );
           return { action: 'raise', amount: raiseAmount };
         }
         return { action: 'check', amount: 0 };
@@ -145,17 +169,29 @@ export class AIEngine {
     if (handStrength < 0.7) {
       if (callAmount === 0) {
         if (aggressionFactor > 0.6) {
-          const raiseAmount = Math.min(gameState.playerBet + potSize * (0.5 + aggressionFactor * 0.3), gameState.playerChips);
+          const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+          const raiseAmount = Math.min(
+            Math.max(minRaise, gameState.playerBet + potSize * (0.5 + aggressionFactor * 0.3)),
+            gameState.playerChips
+          );
           return { action: 'raise', amount: raiseAmount };
         }
-        const raiseAmount = Math.min(gameState.playerBet + potSize * 0.5, gameState.playerChips);
+        const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+        const raiseAmount = Math.min(
+          Math.max(minRaise, gameState.playerBet + potSize * 0.5),
+          gameState.playerChips
+        );
         return Math.random() < 0.5 ? { action: 'raise', amount: raiseAmount } : { action: 'check', amount: 0 };
       }
       
       // Smart calling based on pot odds and hand strength
       if (callAmount < potSize * 0.6) {
         if (Math.random() < aggressionFactor) {
-          const raiseAmount = Math.min(gameState.playerBet + callAmount + potSize * 0.6, gameState.playerChips);
+          const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+          const raiseAmount = Math.min(
+            Math.max(minRaise, gameState.playerBet + callAmount + potSize * 0.6),
+            gameState.playerChips
+          );
           return { action: 'raise', amount: raiseAmount };
         }
         return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
@@ -174,14 +210,19 @@ export class AIEngine {
       if (handStrength > 0.9 && Math.random() < 0.2 && !isLatePhase) {
         return { action: 'check', amount: 0 };
       }
-      const raiseAmount = Math.min(gameState.playerBet + potSize * (0.7 + aggressionFactor * 0.5), gameState.playerChips);
+      const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
+      const raiseAmount = Math.min(
+        Math.max(minRaise, gameState.playerBet + potSize * (0.7 + aggressionFactor * 0.5)),
+        gameState.playerChips
+      );
       return { action: 'raise', amount: raiseAmount };
     }
     
     // Always raise with strong hands
     if (Math.random() < 0.85) {
+      const minRaise = gameState.currentBet + Math.max(potSize * 0.2, 20);
       const raiseAmount = Math.min(
-        gameState.playerBet + callAmount + potSize * (0.8 + aggressionFactor * 0.4),
+        Math.max(minRaise, gameState.playerBet + callAmount + potSize * (0.8 + aggressionFactor * 0.4)),
         gameState.playerChips
       );
       return { action: 'raise', amount: raiseAmount };
