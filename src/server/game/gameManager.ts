@@ -543,14 +543,15 @@ export class GameManager {
     
     const playerCount = parseInt(activePlayersResult.rows[0].count);
     
-    // If only 1 player left or max hands reached, end game
-    if (playerCount <= 1 || (gameInfo.max_hands && gameInfo.current_hand >= gameInfo.max_hands)) {
+    // If only 1 player left, end game immediately
+    if (playerCount <= 1) {
       await client.query(
         "UPDATE games SET status = 'finished' WHERE id = $1",
         [gameId]
       );
     }
     // Otherwise, stay in showdown phase and wait for user to continue
+    // (Even if max hands reached, let user see results and click continue)
   }
   
   async continueToNextHand(gameId: number): Promise<void> {
