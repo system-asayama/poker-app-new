@@ -9,3 +9,13 @@
 - [x] ゲーム画面でのAIプレイヤー表示
 - [x] AIの行動アニメーション実装（1.5秒待機）
 - [x] PostgreSQL JSON型のパース問題修正
+
+## ゲーム進行停止問題の修正
+- [x] AIエンジン: チップ不足時のall-in判定を追加
+- [x] AIエンジン: レイズ額が最小レイズ額を下回る場合の処理を追加
+- [x] AIエンジン: コール額がチップを超える場合にall-inを返すように修正
+- [x] processAITurn: エラー発生時のフォールバック処理を追加（check/fold）
+- [x] processAITurn: エラー後も必ずcurrent_turnを更新するように修正
+- [x] isBettingRoundComplete: 'bet'アクションを削除し'raise'のみに修正
+- [x] performAction: レイズ額検証ロジックを改善
+- [x] performAction: コール時のチップ不足処理を改善

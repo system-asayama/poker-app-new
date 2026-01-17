@@ -31,16 +31,72 @@ export class AIEngine {
     const handStrength = this.evaluateHand(gameState.holeCards, gameState.communityCards);
     const potOdds = this.calculatePotOdds(gameState);
     
+    let decision;
     switch (this.difficulty) {
       case 'easy':
-        return this.easyStrategy(gameState, handStrength);
+        decision = this.easyStrategy(gameState, handStrength);
+        break;
       case 'medium':
-        return this.mediumStrategy(gameState, handStrength, potOdds);
+        decision = this.mediumStrategy(gameState, handStrength, potOdds);
+        break;
       case 'hard':
-        return this.hardStrategy(gameState, handStrength, potOdds);
+        decision = this.hardStrategy(gameState, handStrength, potOdds);
+        break;
       default:
-        return this.easyStrategy(gameState, handStrength);
+        decision = this.easyStrategy(gameState, handStrength);
     }
+    
+    // Validate and fix decision
+    return this.validateDecision(decision, gameState);
+  }
+  
+  // Validate decision and convert to all-in if necessary
+  private validateDecision(decision: { action: string; amount: number }, gameState: GameState): { action: string; amount: number } {
+    const callAmount = gameState.currentBet - gameState.playerBet;
+    const bigBlind = 20; // Default big blind
+    
+    // If call amount exceeds chips, convert to all-in
+    if (decision.action === 'call' && callAmount >= gameState.playerChips) {
+      return { action: 'allin', amount: gameState.playerChips };
+    }
+    
+    // If raise amount is less than or equal to current bet, convert to call or check
+    if (decision.action === 'raise') {
+      const minRaiseTo = gameState.currentBet + Math.max(bigBlind, callAmount);
+      
+      // If player doesn't have enough chips for minimum raise, go all-in or call
+      if (gameState.playerChips + gameState.playerBet <= gameState.currentBet) {
+        // Can't even call, must fold or go all-in
+        if (gameState.playerChips > 0) {
+          return { action: 'allin', amount: gameState.playerChips };
+        }
+        return { action: 'fold', amount: 0 };
+      }
+      
+      if (gameState.playerChips + gameState.playerBet < minRaiseTo) {
+        // Can't raise minimum, go all-in if chips are significant
+        if (gameState.playerChips > callAmount * 1.5) {
+          return { action: 'allin', amount: gameState.playerChips };
+        }
+        // Otherwise just call
+        if (callAmount > 0) {
+          return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
+        }
+        return { action: 'check', amount: 0 };
+      }
+      
+      // If raise amount is less than minimum, adjust it
+      if (decision.amount <= gameState.currentBet) {
+        decision.amount = Math.min(minRaiseTo, gameState.playerChips + gameState.playerBet);
+      }
+      
+      // If raise amount equals all chips, convert to all-in
+      if (decision.amount >= gameState.playerChips + gameState.playerBet) {
+        return { action: 'allin', amount: gameState.playerChips };
+      }
+    }
+    
+    return decision;
   }
 
   // Easy AI: Random decisions with basic hand awareness

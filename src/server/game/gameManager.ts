@@ -187,16 +187,20 @@ export class GameManager {
           
         case 'call':
           const callAmount = await this.getCurrentBet(gameId) - player.currentBet;
-          // Validate: cannot call more than available chips
-          if (callAmount > player.chips) {
-            throw new Error('Insufficient chips to call, use all-in instead');
-          }
-          newPlayerChips -= callAmount;
-          newPlayerBet += callAmount;
-          newPot += callAmount;
-          // If chips become 0, mark as all-in
-          if (newPlayerChips === 0) {
+          // If call amount exceeds chips, automatically convert to all-in
+          if (callAmount >= player.chips) {
+            newPot += player.chips;
+            newPlayerBet += player.chips;
+            newPlayerChips = 0;
             newStatus = 'allin';
+          } else {
+            newPlayerChips -= callAmount;
+            newPlayerBet += callAmount;
+            newPot += callAmount;
+            // If chips become 0, mark as all-in
+            if (newPlayerChips === 0) {
+              newStatus = 'allin';
+            }
           }
           break;
           
@@ -204,23 +208,30 @@ export class GameManager {
           const raiseAmount = amount;
           const currentTableBet = await this.getCurrentBet(gameId);
           const totalNeeded = raiseAmount - player.currentBet;
+          const bigBlind = game.bigBlind || 20;
           
-          // Validate: raise amount must be greater than current bet
-          if (raiseAmount <= currentTableBet) {
-            throw new Error('Raise amount must be greater than current bet');
+          // Calculate minimum raise amount
+          const minRaiseTo = currentTableBet + bigBlind;
+          
+          // Validate: raise amount must be at least minimum raise
+          if (raiseAmount < minRaiseTo) {
+            throw new Error(`Raise amount must be at least ${minRaiseTo}`);
           }
           
-          // Validate: cannot raise more than available chips
-          if (totalNeeded > player.chips) {
-            throw new Error('Insufficient chips to raise, use all-in instead');
-          }
-          
-          newPlayerChips -= totalNeeded;
-          newPlayerBet += totalNeeded;
-          newPot += totalNeeded;
-          // If chips become 0, mark as all-in
-          if (newPlayerChips === 0) {
+          // If total needed exceeds chips, convert to all-in
+          if (totalNeeded >= player.chips) {
+            newPot += player.chips;
+            newPlayerBet += player.chips;
+            newPlayerChips = 0;
             newStatus = 'allin';
+          } else {
+            newPlayerChips -= totalNeeded;
+            newPlayerBet += totalNeeded;
+            newPot += totalNeeded;
+            // If chips become 0, mark as all-in
+            if (newPlayerChips === 0) {
+              newStatus = 'allin';
+            }
           }
           break;
           
@@ -782,11 +793,11 @@ export class GameManager {
       }
     }
     
-    // Find the last raise/bet action in this phase
+    // Find the last raise action in this phase
     const lastRaiseResult = await query(
       `SELECT player_id, created_at
        FROM game_actions
-       WHERE game_id = $1 AND phase = $2 AND action IN ('raise', 'bet')
+       WHERE game_id = $1 AND phase = $2 AND action = 'raise'
        ORDER BY created_at DESC
        LIMIT 1`,
       [gameId, currentPhase]
@@ -974,11 +985,49 @@ export class GameManager {
       const decision = aiEngine.decideAction(gameState);
       console.log(`[processAITurn] AI decided: ${decision.action}, amount: ${decision.amount}`);
       
-      // Perform the action
-      await this.performAction(gameId, playerId, decision.action as PlayerAction, decision.amount);
-      console.log(`[processAITurn] Action performed successfully`);
+      // Perform the action with fallback
+      try {
+        await this.performAction(gameId, playerId, decision.action as PlayerAction, decision.amount);
+        console.log(`[processAITurn] Action performed successfully`);
+      } catch (actionError: any) {
+        console.error('[processAITurn] Error performing action:', actionError.message);
+        
+        // Fallback: try safe actions
+        const callAmount = currentBet - player.currentBet;
+        
+        try {
+          if (callAmount === 0) {
+            // No bet to call, just check
+            console.log('[processAITurn] Fallback: checking');
+            await this.performAction(gameId, playerId, 'check', 0);
+          } else if (player.chips >= callAmount) {
+            // Can afford to call, do that
+            console.log('[processAITurn] Fallback: calling');
+            await this.performAction(gameId, playerId, 'call', callAmount);
+          } else if (player.chips > 0) {
+            // Can't call, go all-in
+            console.log('[processAITurn] Fallback: all-in');
+            await this.performAction(gameId, playerId, 'allin', player.chips);
+          } else {
+            // No chips, fold
+            console.log('[processAITurn] Fallback: folding');
+            await this.performAction(gameId, playerId, 'fold', 0);
+          }
+          console.log('[processAITurn] Fallback action performed successfully');
+        } catch (fallbackError: any) {
+          console.error('[processAITurn] Fallback action also failed:', fallbackError.message);
+          
+          // Last resort: fold
+          try {
+            console.log('[processAITurn] Last resort: folding');
+            await this.performAction(gameId, playerId, 'fold', 0);
+          } catch (foldError) {
+            console.error('[processAITurn] Even fold failed, game may be stuck');
+          }
+        }
+      }
     } catch (error) {
-      console.error('[processAITurn] Error:', error);
+      console.error('[processAITurn] Outer error:', error);
     }
   }
 }
