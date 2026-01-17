@@ -684,11 +684,27 @@ export class GameManager {
   private async startNextHand(gameId: number, client: any): Promise<void> {
     console.log('[startNextHand] Starting next hand for game', gameId);
     
+    // Get current hand before increment
+    const beforeResult = await client.query(
+      'SELECT current_hand, max_hands FROM games WHERE id = $1',
+      [gameId]
+    );
+    const beforeHand = beforeResult.rows[0];
+    console.log('[startNextHand] Before increment:', beforeHand);
+    
     // Increment current_hand
     await client.query(
       'UPDATE games SET current_hand = current_hand + 1 WHERE id = $1',
       [gameId]
     );
+    
+    // Get current hand after increment
+    const afterResult = await client.query(
+      'SELECT current_hand, max_hands FROM games WHERE id = $1',
+      [gameId]
+    );
+    const afterHand = afterResult.rows[0];
+    console.log('[startNextHand] After increment:', afterHand);
     
     // Reset all active players
     await client.query(

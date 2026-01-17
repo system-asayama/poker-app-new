@@ -46,3 +46,8 @@
 - [x] continueToNextHandにデバッグログを追加
 - [x] playerCountとgame.current_handの値を確認
 - [x] ゲーム終了条件を再確認
+
+## 2ハンド目以降「次のハンドへ」ボタンが表示されない問題
+- [x] startNextHandでcurrent_handが正しく更新されているか確認
+- [x] current_handの更新タイミングを修正
+- [x] デバッグログでcurrent_handの値を追跡
