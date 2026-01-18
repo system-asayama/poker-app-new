@@ -383,8 +383,24 @@ export function Game() {
               let winnerData: { playerIds: number[], handRank?: string, amount?: number } | null = null;
               
               if ((game as any).winners) {
-                winnerData = JSON.parse((game as any).winners);
-              } else {
+                try {
+                  const winnersArray = typeof (game as any).winners === 'string' 
+                    ? JSON.parse((game as any).winners) 
+                    : (game as any).winners;
+                  
+                  // Convert from backend format [{ playerId, amount, potIndex }] to frontend format
+                  if (Array.isArray(winnersArray) && winnersArray.length > 0) {
+                    winnerData = {
+                      playerIds: winnersArray.map((w: any) => w.playerId),
+                      amount: winnersArray.reduce((sum: number, w: any) => sum + (w.amount || 0), 0)
+                    };
+                  }
+                } catch (error) {
+                  console.error('Failed to parse winners data:', error);
+                }
+              }
+              
+              if (!winnerData) {
                 // Fallback: find player(s) with highest chips (gained chips from pot)
                 const activePlayers = players.filter(p => p.status === 'active' || p.status === 'allin');
                 if (activePlayers.length > 0) {
@@ -426,8 +442,20 @@ export function Game() {
                 // Determine if this player is a winner
                 let isWinner = false;
                 if ((game as any).winners) {
-                  isWinner = JSON.parse((game as any).winners).playerIds.includes(player.id);
-                } else {
+                  try {
+                    const winnersArray = typeof (game as any).winners === 'string' 
+                      ? JSON.parse((game as any).winners) 
+                      : (game as any).winners;
+                    
+                    if (Array.isArray(winnersArray)) {
+                      isWinner = winnersArray.some((w: any) => w.playerId === player.id);
+                    }
+                  } catch (error) {
+                    console.error('Failed to parse winners for player check:', error);
+                  }
+                }
+                
+                if (!isWinner) {
                   // Fallback: check if player has highest chips among active players
                   const activePlayers = players.filter(p => p.status === 'active' || p.status === 'allin');
                   const maxChips = Math.max(...activePlayers.map(p => p.chips));
