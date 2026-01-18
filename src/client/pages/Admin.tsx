@@ -198,31 +198,90 @@ export function Admin() {
                   <h3 className="text-xl font-bold mb-4">
                     全プレイヤーのホールカード
                   </h3>
-                  <div className="space-y-4">
-                    {gameState.players.map((player) => (
-                      <div
-                        key={player.id}
-                        className="bg-gray-700 rounded-lg p-4 flex justify-between items-center"
-                      >
-                        <div className="flex-1">
-                          <div className="font-bold text-lg mb-1">
-                            {player.user?.username}
-                            {player.isDealer && ' 🎯'}
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            チップ: {player.chips.toLocaleString()} | 
-                            ベット: {player.currentBet.toLocaleString()} | 
-                            ステータス: {player.status}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          {player.holeCards.map((card, i) => (
-                            <Card key={i} card={card} className="w-16" />
-                          ))}
-                        </div>
+                  {(() => {
+                    // Find current winner(s)
+                    const playersWithHands = gameState.players.filter((p: any) => p.currentHand && p.status !== 'folded');
+                    const maxValue = playersWithHands.length > 0 ? Math.max(...playersWithHands.map((p: any) => p.currentHand.value)) : 0;
+                    const winners = playersWithHands.filter((p: any) => p.currentHand.value === maxValue);
+                    const winnerIds = winners.map((w: any) => w.id);
+                    
+                    return (
+                      <div className="space-y-4">
+                        {gameState.players.map((player: any) => {
+                          const isWinner = winnerIds.includes(player.id);
+                          const handRankColors: Record<string, string> = {
+                            'royal_flush': 'text-yellow-300',
+                            'straight_flush': 'text-yellow-400',
+                            'four_of_a_kind': 'text-orange-400',
+                            'full_house': 'text-red-400',
+                            'flush': 'text-purple-400',
+                            'straight': 'text-blue-400',
+                            'three_of_a_kind': 'text-green-400',
+                            'two_pair': 'text-cyan-400',
+                            'one_pair': 'text-gray-300',
+                            'high_card': 'text-gray-500',
+                          };
+                          
+                          const handRankNames: Record<string, string> = {
+                            'royal_flush': 'ロイヤルフラッシュ',
+                            'straight_flush': 'ストレートフラッシュ',
+                            'four_of_a_kind': 'フォーカード',
+                            'full_house': 'フルハウス',
+                            'flush': 'フラッシュ',
+                            'straight': 'ストレート',
+                            'three_of_a_kind': 'スリーカード',
+                            'two_pair': 'ツーペア',
+                            'one_pair': 'ワンペア',
+                            'high_card': 'ハイカード',
+                          };
+                          
+                          return (
+                            <div
+                              key={player.id}
+                              className={`bg-gray-700 rounded-lg p-4 ${
+                                isWinner ? 'ring-4 ring-poker-gold' : ''
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <div className="font-bold text-lg mb-1 flex items-center gap-2">
+                                    {isWinner && <span className="text-2xl">🏆</span>}
+                                    {player.user?.username}
+                                    {player.isDealer && ' 🎯'}
+                                  </div>
+                                  <div className="text-sm text-gray-400">
+                                    チップ: {player.chips.toLocaleString()} | 
+                                    ベット: {player.currentBet.toLocaleString()} | 
+                                    ステータス: {player.status}
+                                  </div>
+                                  {player.currentHand && player.status !== 'folded' && (
+                                    <div className={`text-sm font-bold mt-2 ${
+                                      handRankColors[player.currentHand.rank] || 'text-gray-400'
+                                    }`}>
+                                      現在の役: {handRankNames[player.currentHand.rank] || player.currentHand.rank}
+                                      <span className="text-gray-500 ml-2">
+                                        (強さ: {player.currentHand.value})
+                                      </span>
+                                    </div>
+                                  )}
+                                  {player.status === 'folded' && (
+                                    <div className="text-sm text-red-400 mt-2">
+                                      フォールド済み
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  {player.holeCards.map((card: any, i: number) => (
+                                    <Card key={i} card={card} className="w-16" />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
                 
                 {/* Recent Actions */}

@@ -278,18 +278,35 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       [gameId]
     );
     
-    const players = playersResult.rows.map(p => ({
-      ...p,
-      gameId: p.game_id,
-      userId: p.user_id,
-      currentBet: p.current_bet,
-      holeCards: Array.isArray(p.hole_cards) ? p.hole_cards : [],
-      isDealer: p.is_dealer,
-      user: {
-        username: p.is_ai ? p.ai_name : p.username,
-        email: p.email,
-      },
-    }));
+    const players = playersResult.rows.map(p => {
+      const holeCards = Array.isArray(p.hole_cards) ? p.hole_cards : [];
+      const communityCards = Array.isArray(game.communityCards) ? game.communityCards : [];
+      
+      // Evaluate current hand strength
+      let currentHand = null;
+      if (holeCards.length === 2 && communityCards.length > 0) {
+        try {
+          const { evaluateHand } = require('../game/handEvaluator');
+          currentHand = evaluateHand(holeCards, communityCards);
+        } catch (error) {
+          console.error('Error evaluating hand:', error);
+        }
+      }
+      
+      return {
+        ...p,
+        gameId: p.game_id,
+        userId: p.user_id,
+        currentBet: p.current_bet,
+        holeCards,
+        isDealer: p.is_dealer,
+        currentHand,
+        user: {
+          username: p.is_ai ? p.ai_name : p.username,
+          email: p.email,
+        },
+      };
+    });
     
     const actionsResult = await query(
       'SELECT * FROM game_actions WHERE game_id = $1 ORDER BY created_at DESC',
