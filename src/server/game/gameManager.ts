@@ -505,7 +505,7 @@ export class GameManager {
     }
     
     // Calculate side pots based on player bets
-    const playerBets: PlayerBet[] = allPlayers.map(p => ({
+    const playerBets: PlayerBet[] = allPlayers.map((p: any) => ({
       playerId: p.id,
       bet: p.currentBet,
       status: p.status
@@ -533,13 +533,13 @@ export class GameManager {
       const pot = pots[potIndex];
       
       // Find eligible players for this pot
-      const eligibleHands = hands.filter(h => pot.eligiblePlayers.includes(h.player.id));
+      const eligibleHands = hands.filter((h: any) => pot.eligiblePlayers.includes(h.player.id));
       
       if (eligibleHands.length === 0) continue;
       
       // Find winner(s) for this pot
-      eligibleHands.sort((a, b) => b.hand.value - a.hand.value);
-      const potWinners = eligibleHands.filter(h => h.hand.value === eligibleHands[0].hand.value);
+      eligibleHands.sort((a: any, b: any) => b.hand.value - a.hand.value);
+      const potWinners = eligibleHands.filter((h: any) => h.hand.value === eligibleHands[0].hand.value);
       
       // Distribute pot amount
       const winAmount = Math.floor(pot.amount / potWinners.length);
