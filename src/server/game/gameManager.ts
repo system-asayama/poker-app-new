@@ -758,6 +758,29 @@ export class GameManager {
     const afterHand = afterResult.rows[0];
     console.log('[startNextHand] After increment:', afterHand);
     
+    // Remove players with 0 chips
+    await client.query(
+      "UPDATE game_players SET status = 'out' WHERE game_id = $1 AND chips <= 0",
+      [gameId]
+    );
+    
+    // Check if only one player remains
+    const remainingPlayersResult = await client.query(
+      "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status != 'out'",
+      [gameId]
+    );
+    const remainingCount = parseInt(remainingPlayersResult.rows[0].count);
+    
+    if (remainingCount <= 1) {
+      // Game over - only one player left
+      await client.query(
+        "UPDATE games SET status = 'finished' WHERE id = $1",
+        [gameId]
+      );
+      console.log('[startNextHand] Game over - only one player remaining');
+      return;
+    }
+    
     // Reset all active players
     await client.query(
       "UPDATE game_players SET current_bet = 0, total_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
