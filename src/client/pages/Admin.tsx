@@ -205,6 +205,12 @@ export function Admin() {
                     const winners = playersWithHands.filter((p: any) => p.currentHand.value === maxValue);
                     const winnerIds = winners.map((w: any) => w.id);
                     
+                    // Find final winner(s) (if game continues to showdown)
+                    const playersWithFinalHands = gameState.players.filter((p: any) => p.finalHand && p.status !== 'folded');
+                    const maxFinalValue = playersWithFinalHands.length > 0 ? Math.max(...playersWithFinalHands.map((p: any) => p.finalHand.value)) : 0;
+                    const finalWinners = playersWithFinalHands.filter((p: any) => p.finalHand.value === maxFinalValue);
+                    const finalWinnerIds = finalWinners.map((w: any) => w.id);
+                    
                     return (
                       <div className="space-y-4">
                         {gameState.players.map((player: any) => {
@@ -262,6 +268,22 @@ export function Admin() {
                                       <span className="text-gray-500 ml-2">
                                         (強さ: {player.currentHand.value})
                                       </span>
+                                    </div>
+                                  )}
+                                  {player.finalHand && player.status !== 'folded' && (
+                                    <div className={`text-sm font-bold mt-1 ${
+                                      handRankColors[player.finalHand.rank] || 'text-gray-400'
+                                    }`}>
+                                      {finalWinnerIds.includes(player.id) && <span className="text-yellow-400">⚡ </span>}
+                                      最終的な役: {handRankNames[player.finalHand.rank] || player.finalHand.rank}
+                                      <span className="text-gray-500 ml-2">
+                                        (強さ: {player.finalHand.value})
+                                      </span>
+                                      {finalWinnerIds.includes(player.id) && (
+                                        <span className="text-yellow-400 ml-2 font-bold">
+                                          ← 最後までやったら勝ち
+                                        </span>
+                                      )}
                                     </div>
                                   )}
                                   {player.status === 'folded' && (

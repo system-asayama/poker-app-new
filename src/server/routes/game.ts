@@ -281,6 +281,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
     const players = playersResult.rows.map(p => {
       const holeCards = Array.isArray(p.hole_cards) ? p.hole_cards : [];
       const communityCards = Array.isArray(game.communityCards) ? game.communityCards : [];
+      const deck = Array.isArray(game.deck) ? game.deck : [];
       
       // Evaluate current hand strength
       let currentHand = null;
@@ -289,7 +290,25 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
           const { evaluateHand } = require('../game/handEvaluator');
           currentHand = evaluateHand(holeCards, communityCards);
         } catch (error) {
-          console.error('Error evaluating hand:', error);
+          console.error('Error evaluating current hand:', error);
+        }
+      }
+      
+      // Calculate final hand (if all 5 community cards were dealt)
+      let finalHand = null;
+      if (holeCards.length === 2 && deck.length > 0) {
+        try {
+          const { evaluateHand } = require('../game/handEvaluator');
+          
+          // Build final community cards (current + remaining from deck)
+          const cardsNeeded = 5 - communityCards.length;
+          const finalCommunityCards = [...communityCards, ...deck.slice(0, cardsNeeded)];
+          
+          if (finalCommunityCards.length === 5) {
+            finalHand = evaluateHand(holeCards, finalCommunityCards);
+          }
+        } catch (error) {
+          console.error('Error evaluating final hand:', error);
         }
       }
       
@@ -301,6 +320,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
         holeCards,
         isDealer: p.is_dealer,
         currentHand,
+        finalHand,
         user: {
           username: p.is_ai ? p.ai_name : p.username,
           email: p.email,
