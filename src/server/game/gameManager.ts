@@ -449,20 +449,25 @@ export class GameManager {
     
     const nextTurn = playersResult.rows[0]?.id || null;
     
-    // If no active players (all-in situation), auto-advance to showdown
+    // If no active players (all-in situation), deal all remaining community cards and go to showdown
     if (nextTurn === null) {
-      console.log('[advancePhase] No active players, auto-advancing to showdown');
+      console.log('[advancePhase] No active players, dealing all remaining cards and going to showdown');
+      
+      // Deal all remaining community cards at once
+      while (communityCards.length < 5 && deck.length > 0) {
+        const { cards, remainingDeck } = dealCards(deck, 1);
+        communityCards = [...communityCards, cards[0]];
+        deck = remainingDeck;
+      }
+      
+      // Update to showdown phase
       await client.query(
         'UPDATE games SET current_phase = $1, community_cards = $2, deck = $3, current_turn = NULL WHERE id = $4',
-        [nextPhase, JSON.stringify(communityCards), JSON.stringify(deck), gameId]
+        ['showdown', JSON.stringify(communityCards), JSON.stringify(deck), gameId]
       );
-      // Continue to next phase or showdown
-      if (nextPhase === 'river') {
-        await this.handleShowdown(gameId, client);
-      } else {
-        // Recursively advance to next phase
-        await this.advancePhase(gameId, client);
-      }
+      
+      // Go directly to showdown
+      await this.handleShowdown(gameId, client);
       return;
     }
     
