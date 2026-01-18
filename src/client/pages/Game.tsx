@@ -17,6 +17,8 @@ export function Game() {
   const [actions, setActions] = useState<GameActionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [raiseAmount, setRaiseAmount] = useState(0);
+  const [handAnalysis, setHandAnalysis] = useState<any>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   
   useEffect(() => {
     loadGameState();
@@ -42,10 +44,24 @@ export function Game() {
       setGame(data.game);
       setPlayers(data.players);
       setActions(data.actions);
+      
+      // Load hand analysis if game is playing
+      if (data.game.status === 'playing') {
+        loadHandAnalysis();
+      }
     } catch (error) {
       console.error('Failed to load game state:', error);
     } finally {
       setLoading(false);
+    }
+  }
+  
+  async function loadHandAnalysis() {
+    try {
+      const analysis = await api.getHandAnalysis(gameId);
+      setHandAnalysis(analysis);
+    } catch (error) {
+      console.error('Failed to load hand analysis:', error);
     }
   }
   
@@ -252,6 +268,75 @@ export function Game() {
                 );
               })}
             </div>
+            
+            {/* Hand Analysis Panel */}
+            {currentPlayer && game.status === 'playing' && handAnalysis && (
+              <div className="bg-gray-800 rounded-2xl p-6 mb-4">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-poker-gold">📊 ハンド分析</h3>
+                  <button
+                    onClick={() => setShowAnalysis(!showAnalysis)}
+                    className="text-sm text-gray-400 hover:text-white"
+                  >
+                    {showAnalysis ? '隠す' : '表示'}
+                  </button>
+                </div>
+                
+                {showAnalysis && (
+                  <div className="space-y-4">
+                    {/* Current Hand */}
+                    {handAnalysis.currentHand && (
+                      <div>
+                        <div className="text-sm text-gray-400 mb-1">現在の役</div>
+                        <div className="text-lg font-bold text-green-400">
+                          {getHandRankName(handAnalysis.currentHand.rank)}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Win Probability */}
+                    <div>
+                      <div className="text-sm text-gray-400 mb-2">勝率予測</div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-green-400">勝ち</span>
+                          <span className="font-bold text-green-400">
+                            {(handAnalysis.winProbability.winRate * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2">
+                          <div
+                            className="bg-green-500 h-2 rounded-full"
+                            style={{ width: `${handAnalysis.winProbability.winRate * 100}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-400">
+                          <span>引き分け: {(handAnalysis.winProbability.tieRate * 100).toFixed(1)}%</span>
+                          <span>負け: {(handAnalysis.winProbability.loseRate * 100).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Hand Probabilities */}
+                    {handAnalysis.probabilities.length > 0 && (
+                      <div>
+                        <div className="text-sm text-gray-400 mb-2">完成する可能性のある役</div>
+                        <div className="space-y-1">
+                          {handAnalysis.probabilities.slice(0, 5).map((prob: any, i: number) => (
+                            <div key={i} className="flex justify-between items-center text-sm">
+                              <span>{getHandRankName(prob.handRank)}</span>
+                              <span className="text-poker-gold font-bold">
+                                {(prob.probability * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Action Panel */}
             {currentPlayer && (
@@ -517,4 +602,21 @@ export function Game() {
       </div>
     </div>
   );
+}
+
+// Helper function to get hand rank name in Japanese
+function getHandRankName(rank: string): string {
+  const names: Record<string, string> = {
+    'high_card': 'ハイカード',
+    'one_pair': 'ワンペア',
+    'two_pair': 'ツーペア',
+    'three_of_a_kind': 'スリーカード',
+    'straight': 'ストレート',
+    'flush': 'フラッシュ',
+    'full_house': 'フルハウス',
+    'four_of_a_kind': 'フォーカード',
+    'straight_flush': 'ストレートフラッシュ',
+    'royal_flush': 'ロイヤルフラッシュ',
+  };
+  return names[rank] || rank;
 }

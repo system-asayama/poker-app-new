@@ -72,6 +72,9 @@ export const api = {
   continueToNextHand: (gameId: number) =>
     fetchAPI(`/games/${gameId}/continue`, { method: 'POST' }),
   
+  getHandAnalysis: (gameId: number) =>
+    fetchAPI(`/games/${gameId}/analysis`),
+  
   // Admin
   getAdminGameState: (gameId: number) =>
     fetchAPI(`/games/${gameId}/admin`),

@@ -3,6 +3,7 @@ import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth
 import { gameManager } from '../game/gameManager.js';
 import { query } from '../database/db.js';
 import { evaluateHand } from '../game/handEvaluator.js';
+import { analyzeHand } from '../game/probabilityCalculator.js';
 
 const router = express.Router();
 
@@ -410,6 +411,51 @@ router.post('/:gameId/force-ai-turn', authenticateToken, requireAdmin, async (re
   } catch (error) {
     console.error('Force AI turn error:', error);
     res.status(500).json({ error: 'Failed to force AI turn', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// Get hand analysis (probabilities and win rate)
+router.get('/:gameId/analysis', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const gameId = parseInt(req.params.gameId);
+    
+    // Get game state
+    const gameResult = await query('SELECT * FROM games WHERE id = $1', [gameId]);
+    if (gameResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    
+    const game = gameResult.rows[0];
+    
+    // Get player
+    const playerResult = await query(
+      'SELECT * FROM game_players WHERE game_id = $1 AND user_id = $2',
+      [gameId, req.user!.id]
+    );
+    
+    if (playerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Player not found in game' });
+    }
+    
+    const player = playerResult.rows[0];
+    const holeCards = Array.isArray(player.hole_cards) ? player.hole_cards : [];
+    const communityCards = Array.isArray(game.community_cards) ? game.community_cards : [];
+    const deck = Array.isArray(game.deck) ? game.deck : [];
+    
+    // Count active opponents
+    const opponentsResult = await query(
+      'SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND id != $2 AND status = $3',
+      [gameId, player.id, 'active']
+    );
+    const numOpponents = parseInt(opponentsResult.rows[0].count);
+    
+    // Analyze hand
+    const analysis = analyzeHand(holeCards, communityCards, deck, numOpponents);
+    
+    res.json(analysis);
+  } catch (error) {
+    console.error('Get hand analysis error:', error);
+    res.status(500).json({ error: 'Failed to get hand analysis' });
   }
 });
 
