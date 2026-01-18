@@ -187,7 +187,23 @@ export function Game() {
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                 <div className="text-center mb-4">
                   <div className="text-2xl font-bold text-white mb-2">
-                    ポット: {game.pot.toLocaleString()}
+                    ポット: {(() => {
+                      // If showdown phase, calculate pot from winners
+                      if (game.currentPhase === 'showdown' && (game as any).winners) {
+                        try {
+                          const winnersArray = typeof (game as any).winners === 'string'
+                            ? JSON.parse((game as any).winners)
+                            : (game as any).winners;
+                          if (Array.isArray(winnersArray) && winnersArray.length > 0) {
+                            const totalPot = winnersArray.reduce((sum: number, w: any) => sum + (w.amount || 0), 0);
+                            return totalPot.toLocaleString();
+                          }
+                        } catch (e) {
+                          console.error('Failed to parse winners:', e);
+                        }
+                      }
+                      return game.pot.toLocaleString();
+                    })()}
                   </div>
                   {(game as any).sidePots && JSON.parse((game as any).sidePots || '[]').length > 0 && (
                     <div className="text-sm text-gray-300 mt-1">
@@ -367,7 +383,23 @@ export function Game() {
                     コミュニティカード
                   </div>
                   <div className="text-lg text-poker-gold">
-                    ポット: {game.pot.toLocaleString()}
+                    ポット: {(() => {
+                      // If showdown phase, calculate pot from winners
+                      if (game.currentPhase === 'showdown' && (game as any).winners) {
+                        try {
+                          const winnersArray = typeof (game as any).winners === 'string'
+                            ? JSON.parse((game as any).winners)
+                            : (game as any).winners;
+                          if (Array.isArray(winnersArray) && winnersArray.length > 0) {
+                            const totalPot = winnersArray.reduce((sum: number, w: any) => sum + (w.amount || 0), 0);
+                            return totalPot.toLocaleString();
+                          }
+                        } catch (e) {
+                          console.error('Failed to parse winners:', e);
+                        }
+                      }
+                      return game.pot.toLocaleString();
+                    })()}
                   </div>
                 </div>
                 <div className="flex gap-2 justify-center">
