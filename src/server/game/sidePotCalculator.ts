@@ -53,10 +53,8 @@ export function calculatePots(playerBets: PlayerBet[]): Pot[] {
     }
     
     // Remove current player from eligible players for next pot
-    // (they're all-in and can't win more)
-    if (sortedBets[i].status === 'allin') {
-      remainingPlayers = remainingPlayers.filter(id => id !== sortedBets[i].playerId);
-    }
+    // (they've contributed their maximum bet)
+    remainingPlayers = remainingPlayers.filter(id => id !== sortedBets[i].playerId);
     
     previousBetLevel = currentBetLevel;
   }

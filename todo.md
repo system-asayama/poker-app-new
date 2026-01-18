@@ -137,5 +137,13 @@
 - [x] continueToNextHand関数でSocket.IOイベントが発火されているか確認
 - [x] フロントエンドのhandleContinueToNextHand関数を確認
 - [x] 修正を実装（handleContinueToNextHandにフォールバックとしてloadGameStateを追加）
+- [x] GitHubにプッシュしてHerokuにデプロイ
+- [ ] 本番環境でブラウザテストを実施
+
+## ショーダウン時のチップ配当計算が間違っている
+- [x] handleShowdown関数のポット分配ロジックを確認
+- [x] サイドポット計算ロジックを確認
+- [x] チップ総数が保存されているか確認
+- [x] 根本原因を特定して修正（calculatePots関数ですべてのプレイヤーを次のポットから除外するように修正）
 - [ ] GitHubにプッシュしてHerokuにデプロイ
 - [ ] 本番環境でブラウザテストを実施
