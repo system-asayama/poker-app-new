@@ -117,8 +117,8 @@ export class GameManager {
         );
       }
       
-      // Pot starts at 0; blinds are in current_bet and will be added to pot when actions are performed
-      const pot = 0;
+      // Pot starts with blinds
+      const pot = game.smallBlind + game.bigBlind;
       const currentTurn = (3 % players.length);
       
       // Invariant check after blind posting
@@ -470,18 +470,7 @@ export class GameManager {
       deck = remainingDeck;
     }
     
-    // Add current bets to pot before resetting
-    const sumBetsResult = await client.query(
-      'SELECT SUM(current_bet) as sum_bets FROM game_players WHERE game_id = $1',
-      [gameId]
-    );
-    const sumBets = parseInt(sumBetsResult.rows[0].sum_bets) || 0;
-    await client.query(
-      'UPDATE games SET pot = pot + $1 WHERE id = $2',
-      [sumBets, gameId]
-    );
-    
-    // Reset bets
+    // Reset bets (pot already contains all bets from performAction)
     await client.query('UPDATE game_players SET current_bet = 0 WHERE game_id = $1', [gameId]);
     
     // Get first active player (only status='active', not 'allin')
@@ -940,11 +929,12 @@ export class GameManager {
     const firstToAct = players[firstToActIndex];
     
     // Update game state
-    // Pot starts at 0; blinds are in current_bet and will be added to pot when actions are performed
+    // Pot starts with blinds
+    const pot = smallBlind + bigBlind;
     const remainingDeck = shuffledDeck.slice(deckIndex);
     await client.query(
       "UPDATE games SET current_phase = 'preflop', dealer_position = $1, current_turn = $2, community_cards = '[]', deck = $3, pot = $4, winners = NULL WHERE id = $5",
-      [nextDealer, firstToAct.id, JSON.stringify(remainingDeck), 0, gameId]
+      [nextDealer, firstToAct.id, JSON.stringify(remainingDeck), pot, gameId]
     );
     
     console.log('[startNextHand] Next hand started, first to act:', firstToAct.id);
