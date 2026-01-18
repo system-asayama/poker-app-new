@@ -30,7 +30,6 @@ export function calculatePots(playerBets: PlayerBet[]): Pot[] {
   const sortedBets = [...activeBets].sort((a, b) => a.bet - b.bet);
   
   const pots: Pot[] = [];
-  let remainingPlayers = sortedBets.map(p => p.playerId);
   let previousBetLevel = 0;
   
   for (let i = 0; i < sortedBets.length; i++) {
@@ -43,18 +42,21 @@ export function calculatePots(playerBets: PlayerBet[]): Pot[] {
     
     // Calculate pot amount for this level
     const betDifference = currentBetLevel - previousBetLevel;
-    const potAmount = betDifference * remainingPlayers.length;
+    
+    // CRITICAL FIX: Only include players who bet >= currentBetLevel
+    // This ensures side pots only include players who actually contributed
+    const eligiblePlayers = activeBets
+      .filter(p => p.bet >= currentBetLevel)
+      .map(p => p.playerId);
+    
+    const potAmount = betDifference * eligiblePlayers.length;
     
     if (potAmount > 0) {
       pots.push({
         amount: potAmount,
-        eligiblePlayers: [...remainingPlayers]
+        eligiblePlayers: [...eligiblePlayers]
       });
     }
-    
-    // Remove current player from eligible players for next pot
-    // (they've contributed their maximum bet)
-    remainingPlayers = remainingPlayers.filter(id => id !== sortedBets[i].playerId);
     
     previousBetLevel = currentBetLevel;
   }
@@ -65,6 +67,7 @@ export function calculatePots(playerBets: PlayerBet[]): Pot[] {
 /**
  * Example usage:
  * 
+ * Example 1: Simple all-in
  * Player A: 100 chips (all-in)
  * Player B: 200 chips (bet)
  * Player C: 200 chips (bet)
@@ -77,7 +80,26 @@ export function calculatePots(playerBets: PlayerBet[]): Pot[] {
  * 
  * Returns:
  * [
- *   { amount: 300, eligiblePlayers: [1, 2, 3] },  // Main pot
- *   { amount: 200, eligiblePlayers: [2, 3] }      // Side pot
+ *   { amount: 300, eligiblePlayers: [1, 2, 3] },  // Main pot: 100 × 3
+ *   { amount: 200, eligiblePlayers: [2, 3] }      // Side pot: (200-100) × 2
  * ]
+ * Total: 300 + 200 = 500 (matches 100 + 200 + 200)
+ * 
+ * Example 2: Multiple small bets vs one large bet
+ * Player A: 80 chips
+ * Player B: 80 chips
+ * Player C: 980 chips
+ * 
+ * calculatePots([
+ *   { playerId: 1, bet: 80, status: 'active' },
+ *   { playerId: 2, bet: 80, status: 'active' },
+ *   { playerId: 3, bet: 980, status: 'active' }
+ * ])
+ * 
+ * Returns:
+ * [
+ *   { amount: 240, eligiblePlayers: [1, 2, 3] },  // Main pot: 80 × 3
+ *   { amount: 900, eligiblePlayers: [3] }         // Side pot: (980-80) × 1
+ * ]
+ * Total: 240 + 900 = 1140 (matches 80 + 80 + 980)
  */
