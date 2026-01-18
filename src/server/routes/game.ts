@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { gameManager } from '../game/gameManager.js';
 import { query } from '../database/db.js';
+import { evaluateHand } from '../game/handEvaluator.js';
 
 const router = express.Router();
 
@@ -287,10 +288,9 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       let currentHand = null;
       if (holeCards.length === 2 && communityCards.length > 0) {
         try {
-          const { evaluateHand } = require('../game/handEvaluator.js');
           currentHand = evaluateHand(holeCards, communityCards);
-        } catch (error) {
-          console.error('Error evaluating current hand:', error);
+        } catch (error: any) {
+          console.error('[Admin] Error evaluating current hand for player', p.id, ':', error.message);
         }
       }
       
@@ -298,18 +298,23 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       let finalHand = null;
       if (holeCards.length === 2 && deck.length > 0) {
         try {
-          const { evaluateHand } = require('../game/handEvaluator.js');
-          
           // Build final community cards (current + remaining from deck)
           const cardsNeeded = 5 - communityCards.length;
           const finalCommunityCards = [...communityCards, ...deck.slice(0, cardsNeeded)];
           
+          console.log(`[Admin] Player ${p.id}: holeCards=${JSON.stringify(holeCards)}, communityCards=${communityCards.length}, deck=${deck.length}, cardsNeeded=${cardsNeeded}, finalCommunity=${finalCommunityCards.length}`);
+          
           if (finalCommunityCards.length === 5) {
             finalHand = evaluateHand(holeCards, finalCommunityCards);
+            console.log(`[Admin] Player ${p.id} finalHand:`, finalHand.rank, 'value:', finalHand.value);
+          } else {
+            console.log(`[Admin] Player ${p.id}: Not enough cards for final hand (need 5, have ${finalCommunityCards.length})`);
           }
-        } catch (error) {
-          console.error('Error evaluating final hand:', error);
+        } catch (error: any) {
+          console.error('[Admin] Error evaluating final hand for player', p.id, ':', error.message, error.stack);
         }
+      } else {
+        console.log(`[Admin] Player ${p.id}: Cannot calculate final hand - holeCards=${holeCards.length}, deck=${deck.length}`);
       }
       
       return {
