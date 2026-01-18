@@ -183,6 +183,15 @@ export function Game() {
                   <div className="text-2xl font-bold text-white mb-2">
                     ポット: {game.pot.toLocaleString()}
                   </div>
+                  {(game as any).sidePots && JSON.parse((game as any).sidePots || '[]').length > 0 && (
+                    <div className="text-sm text-gray-300 mt-1">
+                      {JSON.parse((game as any).sidePots).map((pot: any, i: number) => (
+                        <div key={i}>
+                          {i === 0 ? 'メイン' : `サイド${i}`}: {pot.amount.toLocaleString()}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2 justify-center">
                   {game.communityCards.map((card, i) => (

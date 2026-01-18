@@ -1,4 +1,5 @@
-import { query, getClient } from '../database/db.js';
+import { query, getClient } from '../database/db';
+import { calculatePots, PlayerBet, Pot } from './sidePotCalculator.js';
 import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { evaluateHand, compareHands } from './handEvaluator.js';
 import { Game, GamePlayer, GamePhase, PlayerAction, Winner, Card } from '@shared/types.js';
@@ -503,37 +504,66 @@ export class GameManager {
       );
     }
     
+    // Calculate side pots based on player bets
+    const playerBets: PlayerBet[] = allPlayers.map(p => ({
+      playerId: p.id,
+      bet: p.currentBet,
+      status: p.status
+    }));
+    
+    const pots = calculatePots(playerBets);
+    console.log('[handleShowdown] Calculated pots:', JSON.stringify(pots));
+    
+    // Store side pots in database
+    await client.query(
+      'UPDATE games SET side_pots = $1 WHERE id = $2',
+      [JSON.stringify(pots), gameId]
+    );
+    
     // Evaluate hands for active players only
     const hands = players.map((player: GamePlayer) => ({
       player,
       hand: evaluateHand(player.holeCards, game.communityCards),
     }));
     
-    // Find winner(s) - sort in descending order (highest hand value first)
-    hands.sort((a: any, b: any) => b.hand.value - a.hand.value);
-    const winners = hands.filter((h: any) => h.hand.value === hands[0].hand.value);
+    // Distribute each pot to its winners
+    const allWinners: Array<{ playerId: number; amount: number; potIndex: number }> = [];
     
-    // Distribute pot
-    const winAmount = Math.floor(game.pot / winners.length);
-    
-    for (const winner of winners) {
-      await client.query(
-        'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
-        [winAmount, winner.player.id]
-      );
+    for (let potIndex = 0; potIndex < pots.length; potIndex++) {
+      const pot = pots[potIndex];
+      
+      // Find eligible players for this pot
+      const eligibleHands = hands.filter(h => pot.eligiblePlayers.includes(h.player.id));
+      
+      if (eligibleHands.length === 0) continue;
+      
+      // Find winner(s) for this pot
+      eligibleHands.sort((a, b) => b.hand.value - a.hand.value);
+      const potWinners = eligibleHands.filter(h => h.hand.value === eligibleHands[0].hand.value);
+      
+      // Distribute pot amount
+      const winAmount = Math.floor(pot.amount / potWinners.length);
+      
+      for (const winner of potWinners) {
+        await client.query(
+          'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
+          [winAmount, winner.player.id]
+        );
+        
+        allWinners.push({
+          playerId: winner.player.id,
+          amount: winAmount,
+          potIndex
+        });
+      }
+      
+      console.log(`[handleShowdown] Pot ${potIndex}: ${pot.amount} chips distributed to ${potWinners.length} winner(s)`);
     }
     
     // Save winner information
-    const winnerIds = winners.map((w: any) => w.player.id);
-    const winnerInfo = {
-      playerIds: winnerIds,
-      handRank: winners[0].hand.rank,
-      amount: winAmount,
-    };
-    
     await client.query(
       'UPDATE games SET current_phase = $1, current_turn = NULL, winners = $2, pot = 0 WHERE id = $3',
-      ['showdown', JSON.stringify(winnerInfo), gameId]
+      ['showdown', JSON.stringify(allWinners), gameId]
     );
     
     // Set a flag to indicate hand is complete and waiting for next hand
