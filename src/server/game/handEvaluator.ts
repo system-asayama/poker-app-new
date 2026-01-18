@@ -149,16 +149,26 @@ function checkStraight(sortedCards: Card[]): boolean {
   const values = sortedCards.map(card => rankValues[card.rank]);
   
   // Check regular straight
+  let isRegularStraight = true;
   for (let i = 0; i < values.length - 1; i++) {
     if (values[i] - values[i + 1] !== 1) {
-      // Check for A-2-3-4-5 straight
-      if (sortedCards[0].rank === 'A' && sortedCards[1].rank === '5') {
-        return true;
-      }
-      return false;
+      isRegularStraight = false;
+      break;
     }
   }
-  return true;
+  
+  if (isRegularStraight) {
+    return true;
+  }
+  
+  // Check for A-2-3-4-5 straight (wheel)
+  const ranks = sortedCards.map(c => c.rank).sort();
+  const wheelRanks = ['2', '3', '4', '5', 'A'];
+  if (ranks.length === 5 && ranks.every((rank, i) => rank === wheelRanks[i])) {
+    return true;
+  }
+  
+  return false;
 }
 
 function countRanks(cards: Card[]): { rank: Rank; count: number }[] {
