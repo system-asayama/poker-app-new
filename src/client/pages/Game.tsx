@@ -455,12 +455,7 @@ export function Game() {
                   }
                 }
                 
-                if (!isWinner) {
-                  // Fallback: check if player has highest chips among active players
-                  const activePlayers = players.filter(p => p.status === 'active' || p.status === 'allin');
-                  const maxChips = Math.max(...activePlayers.map(p => p.chips));
-                  isWinner = player.chips === maxChips && (player.status === 'active' || player.status === 'allin');
-                }
+                // isWinner is already determined from game.winners
                 return (
                   <div
                     key={player.id}
