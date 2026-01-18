@@ -266,7 +266,7 @@ export class GameManager {
       const activeCount = parseInt(activePlayers.rows[0].count);
       
       if (activeCount <= 1) {
-        // Game over - award pot to winner
+        // Hand over - award pot to winner
         const winnerResult = await client.query(
           "SELECT id, chips FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin') LIMIT 1",
           [gameId]
@@ -278,10 +278,22 @@ export class GameManager {
             'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
             [newPot, winner.id]
           );
+          
+          // Store winner info
+          await client.query(
+            "UPDATE games SET winners = $1 WHERE id = $2",
+            [JSON.stringify([{ playerId: winner.id, amount: newPot }]), gameId]
+          );
         }
         
-        // End game
-        await client.query('UPDATE games SET status = $1, pot = 0 WHERE id = $2', ['finished', gameId]);
+        // Move to showdown phase (hand complete, but game may continue)
+        await client.query(
+          "UPDATE games SET current_phase = 'showdown', pot = 0, current_turn = NULL WHERE id = $1",
+          [gameId]
+        );
+        
+        // Check if game should end (handled by continueToNextHand)
+        await this.checkAndStartNextHand(gameId, client);
       } else {
         // Move to next player
         const nextTurn = await this.getNextPlayer(gameId, playerId);
