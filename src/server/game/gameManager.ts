@@ -600,6 +600,12 @@ export class GameManager {
     }
     // Otherwise, stay in showdown phase and wait for user to continue
     // (Even if max hands reached, let user see results and click continue)
+    
+    // Emit game update via Socket.IO
+    if (this.io) {
+      this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+      console.log(`[Socket.IO] Emitted game-update after showdown for game ${gameId}`);
+    }
   }
   
   async continueToNextHand(gameId: number): Promise<void> {
