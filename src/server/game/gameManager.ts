@@ -117,8 +117,18 @@ export class GameManager {
         );
       }
       
-      const pot = game.smallBlind + game.bigBlind;
+      // Pot starts at 0; blinds are in current_bet and will be added to pot when actions are performed
+      const pot = 0;
       const currentTurn = (3 % players.length);
+      
+      // Invariant check after blind posting
+      const checkResult = await client.query(
+        'SELECT SUM(chips) as sum_chips, SUM(current_bet) as sum_bets FROM game_players WHERE game_id = $1',
+        [gameId]
+      );
+      const sumChips = parseInt(checkResult.rows[0].sum_chips) || 0;
+      const sumBets = parseInt(checkResult.rows[0].sum_bets) || 0;
+      console.log(`[startGame] Invariant check: sumChips=${sumChips}, sumBets=${sumBets}, pot=${pot}, total=${sumChips + sumBets + pot}`);
       
       // Update game state
       await client.query(
@@ -190,8 +200,9 @@ export class GameManager {
           const callAmount = await this.getCurrentBet(gameId) - player.currentBet;
           // If call amount exceeds chips, automatically convert to all-in
           if (callAmount >= player.chips) {
-            newPot += player.chips;
-            newPlayerBet += player.chips;
+            const betIncrease_call = player.chips;
+            newPot += betIncrease_call;
+            newPlayerBet += betIncrease_call;
             newPlayerChips = 0;
             newStatus = 'allin';
           } else {
@@ -221,8 +232,9 @@ export class GameManager {
           
           // If total needed exceeds chips, convert to all-in
           if (totalNeeded >= player.chips) {
-            newPot += player.chips;
-            newPlayerBet += player.chips;
+            const betIncrease_raise = player.chips;
+            newPot += betIncrease_raise;
+            newPlayerBet += betIncrease_raise;
             newPlayerChips = 0;
             newStatus = 'allin';
           } else {
@@ -237,8 +249,9 @@ export class GameManager {
           break;
           
         case 'allin':
-          newPot += player.chips;
-          newPlayerBet += player.chips;
+          const betIncrease_allin = player.chips;
+          newPot += betIncrease_allin;
+          newPlayerBet += betIncrease_allin;
           newPlayerChips = 0;
           newStatus = 'allin';
           break;
@@ -259,6 +272,15 @@ export class GameManager {
       
       // Update pot
       await client.query('UPDATE games SET pot = $1 WHERE id = $2', [newPot, gameId]);
+      
+      // Invariant check: sumChips + sumCurrentBet + pot should equal initial total
+      const checkResult = await client.query(
+        'SELECT SUM(chips) as sum_chips, SUM(current_bet) as sum_bets FROM game_players WHERE game_id = $1',
+        [gameId]
+      );
+      const sumChips = parseInt(checkResult.rows[0].sum_chips) || 0;
+      const sumBets = parseInt(checkResult.rows[0].sum_bets) || 0;
+      console.log(`[performAction] Invariant check: sumChips=${sumChips}, sumBets=${sumBets}, pot=${newPot}, total=${sumChips + sumBets + newPot}`);
       
       // Check if only one player remains (all others folded)
       const activePlayers = await client.query(
@@ -907,10 +929,11 @@ export class GameManager {
     const firstToAct = players[firstToActIndex];
     
     // Update game state
+    // Pot starts at 0; blinds are in current_bet and will be added to pot when actions are performed
     const remainingDeck = shuffledDeck.slice(deckIndex);
     await client.query(
       "UPDATE games SET current_phase = 'preflop', dealer_position = $1, current_turn = $2, community_cards = '[]', deck = $3, pot = $4, winners = NULL WHERE id = $5",
-      [nextDealer, firstToAct.id, JSON.stringify(remainingDeck), smallBlind + bigBlind, gameId]
+      [nextDealer, firstToAct.id, JSON.stringify(remainingDeck), 0, gameId]
     );
     
     console.log('[startNextHand] Next hand started, first to act:', firstToAct.id);
