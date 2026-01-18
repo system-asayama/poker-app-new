@@ -14,22 +14,28 @@ export interface Pot {
   eligiblePlayers: number[]; // Player IDs who can win this pot
 }
 
+export interface PotCalculationResult {
+  pots: Pot[];
+  refunds: Map<number, number>; // playerId -> refund amount
+}
+
 /**
  * Calculate pots based on player bets
- * Returns array of pots: [mainPot, sidePot1, sidePot2, ...]
+ * Returns pots and refunds (uncalled bets)
  */
-export function calculatePots(playerBets: PlayerBet[]): Pot[] {
+export function calculatePots(playerBets: PlayerBet[]): PotCalculationResult {
   // Filter out folded players
   const activeBets = playerBets.filter(p => p.status !== 'folded');
   
   if (activeBets.length === 0) {
-    return [];
+    return { pots: [], refunds: new Map() };
   }
   
   // Sort by bet amount (ascending)
   const sortedBets = [...activeBets].sort((a, b) => a.bet - b.bet);
   
   const pots: Pot[] = [];
+  const refunds = new Map<number, number>();
   let previousBetLevel = 0;
   
   for (let i = 0; i < sortedBets.length; i++) {
@@ -52,16 +58,24 @@ export function calculatePots(playerBets: PlayerBet[]): Pot[] {
     const potAmount = betDifference * eligiblePlayers.length;
     
     if (potAmount > 0) {
-      pots.push({
-        amount: potAmount,
-        eligiblePlayers: [...eligiblePlayers]
-      });
+      // CRITICAL FIX: If only one player is eligible, this is an uncalled bet (refund)
+      if (eligiblePlayers.length === 1) {
+        const playerId = eligiblePlayers[0];
+        const currentRefund = refunds.get(playerId) || 0;
+        refunds.set(playerId, currentRefund + potAmount);
+      } else {
+        // Multiple players eligible - create a pot
+        pots.push({
+          amount: potAmount,
+          eligiblePlayers: [...eligiblePlayers]
+        });
+      }
     }
     
     previousBetLevel = currentBetLevel;
   }
   
-  return pots;
+  return { pots, refunds };
 }
 
 /**

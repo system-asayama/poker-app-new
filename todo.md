@@ -149,9 +149,15 @@
 - [ ] 本番環境でブラウザテストを実施
 
 ## calculatePots修正後もチップの合計が正しくない
-- [ ] 実際のゲームデータ（ベット額、ポット）を確認
-- [ ] calculatePots関数のロジックを再確認
-- [ ] テストケースを追加して問題を再現
-- [ ] 根本原因を特定して修正
+- [x] 実際のゲームデータ（ベット額、ポット）を確認
+- [x] calculatePots関数のロジックを再確認
+- [x] テストケースを追加して問題を再現
+- [x] 根本原因を特定: オールイン時のuncalled bet返金とfolded扱いの不統一
+
+## サイドポット計算とオールイン時のチップ消失バグ修正
+- [x] calculatePots関数を修正: eligiblePlayers.length === 1 のポットを返金として扱う
+- [x] handleShowdown関数を修正: foldedプレイヤーのベットを正しく集計
+- [x] 不変条件チェックを追加: sumChipsAfter = sumChipsBefore + refundTotal + distributedTotal - sumTotalBet
+- [x] ログ出力を追加: sumChipsBefore, sumChipsAfter, sumTotalBet, refundTotal, distributedTotal
 - [ ] GitHubにプッシュしてHerokuにデプロイ
 - [ ] 本番環境でブラウザテストを実施

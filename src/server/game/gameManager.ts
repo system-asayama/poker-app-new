@@ -550,6 +550,11 @@ export class GameManager {
       status: p.status
     })), null, 2));
     
+    // Invariant check: Record chips before distribution
+    const sumChipsBefore = allPlayers.reduce((sum: number, p: any) => sum + (p.chips || 0), 0);
+    const sumTotalBet = allPlayers.reduce((sum: number, p: any) => sum + (p.total_bet || p.totalBet || 0), 0);
+    console.log(`[handleShowdown] Invariant check BEFORE: sumChipsBefore=${sumChipsBefore}, sumTotalBet=${sumTotalBet}, pot=${game.pot}`);
+    
     const playerBets: PlayerBet[] = allPlayers.map((p: any) => ({
       playerId: p.id,
       bet: p.totalBet || p.total_bet || 0,
@@ -558,18 +563,29 @@ export class GameManager {
     
     console.log('[handleShowdown] Player bets for pot calculation:', JSON.stringify(playerBets, null, 2));
     
-    const pots = calculatePots(playerBets);
+    const { pots, refunds } = calculatePots(playerBets);
     console.log('[handleShowdown] Calculated pots:', JSON.stringify(pots));
+    console.log('[handleShowdown] Refunds (uncalled bets):', JSON.stringify(Array.from(refunds.entries())));
     
     const totalPot = pots.reduce((sum, pot) => sum + pot.amount, 0);
+    const totalRefund = Array.from(refunds.values()).reduce((sum, amount) => sum + amount, 0);
     const totalBet = playerBets.reduce((sum, p) => sum + p.bet, 0);
-    console.log(`[handleShowdown] Total pot: ${totalPot}, Total bet: ${totalBet}, Difference: ${totalBet - totalPot}`);
+    console.log(`[handleShowdown] Total pot: ${totalPot}, Total refund: ${totalRefund}, Total bet: ${totalBet}, Difference: ${totalBet - totalPot - totalRefund}`);
     
     // Store side pots in database
     await client.query(
       'UPDATE games SET side_pots = $1 WHERE id = $2',
       [JSON.stringify(pots), gameId]
     );
+    
+    // Process refunds (uncalled bets)
+    for (const [playerId, refundAmount] of refunds.entries()) {
+      await client.query(
+        'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
+        [refundAmount, playerId]
+      );
+      console.log(`[handleShowdown] Refunded ${refundAmount} chips to player ${playerId}`);
+    }
     
     // Evaluate hands for active players only
     const hands = players.map((player: GamePlayer) => ({
@@ -609,6 +625,27 @@ export class GameManager {
       }
       
       console.log(`[handleShowdown] Pot ${potIndex}: ${pot.amount} chips distributed to ${potWinners.length} winner(s)`);
+    }
+    
+    // Invariant check: Verify chips after distribution
+    const sumChipsAfterResult = await client.query(
+      'SELECT SUM(chips) as sum_chips FROM game_players WHERE game_id = $1',
+      [gameId]
+    );
+    const sumChipsAfter = parseInt(sumChipsAfterResult.rows[0].sum_chips) || 0;
+    const distributedTotal = allWinners.reduce((sum, w) => sum + w.amount, 0);
+    const refundTotal = Array.from(refunds.values()).reduce((sum, amount) => sum + amount, 0);
+    
+    console.log(`[handleShowdown] Invariant check AFTER: sumChipsAfter=${sumChipsAfter}, distributedTotal=${distributedTotal}, refundTotal=${refundTotal}`);
+    console.log(`[handleShowdown] Expected: sumChipsAfter = sumChipsBefore + distributedTotal + refundTotal - sumTotalBet`);
+    console.log(`[handleShowdown] Actual: ${sumChipsAfter} = ${sumChipsBefore} + ${distributedTotal} + ${refundTotal} - ${sumTotalBet}`);
+    console.log(`[handleShowdown] Calculated: ${sumChipsBefore + distributedTotal + refundTotal - sumTotalBet}`);
+    
+    if (sumChipsAfter !== sumChipsBefore + distributedTotal + refundTotal - sumTotalBet) {
+      console.error(`[handleShowdown] INVARIANT VIOLATION: Chip count mismatch!`);
+      console.error(`[handleShowdown] Difference: ${sumChipsAfter - (sumChipsBefore + distributedTotal + refundTotal - sumTotalBet)}`);
+    } else {
+      console.log(`[handleShowdown] Invariant check PASSED ✓`);
     }
     
     // Save winner information
