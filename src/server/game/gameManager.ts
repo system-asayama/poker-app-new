@@ -1,4 +1,4 @@
-import { query, getClient } from '../database/db';
+import { query, getClient } from '../database/db.js';
 import { calculatePots, PlayerBet, Pot } from './sidePotCalculator.js';
 import { createDeck, shuffleDeck, dealCards } from './deck.js';
 import { evaluateHand, compareHands } from './handEvaluator.js';
