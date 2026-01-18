@@ -331,13 +331,24 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
     const handEvaluations: any[] = [];
     const predictedWinners: number[] = [];
     
-    if (game.community_cards && game.community_cards.length >= 3) {
-      const communityCards = game.community_cards as Card[];
-      
-      // Evaluate each player's hand
+    // Get final community cards (5 cards total)
+    let finalCommunityCards: Card[] = [];
+    const currentCommunityCards = (game.community_cards || []) as Card[];
+    const deck = (game.deck || []) as Card[];
+    
+    // Build final 5-card community by taking from current + deck
+    finalCommunityCards = [...currentCommunityCards];
+    const cardsNeeded = 5 - currentCommunityCards.length;
+    if (cardsNeeded > 0 && deck.length >= cardsNeeded) {
+      finalCommunityCards.push(...deck.slice(0, cardsNeeded));
+    }
+    
+    // Only evaluate if we have exactly 5 community cards
+    if (finalCommunityCards.length === 5) {
+      // Evaluate each player's hand with final community cards
       for (const player of players) {
         if (player.status !== 'folded' && player.holeCards.length === 2) {
-          const handResult = evaluateHand(player.holeCards as Card[], communityCards);
+          const handResult = evaluateHand(player.holeCards as Card[], finalCommunityCards);
           handEvaluations.push({
             playerId: player.id,
             handRank: handResult.rank,
