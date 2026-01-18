@@ -511,14 +511,28 @@ export class GameManager {
     }
     
     // Calculate side pots based on player bets
+    console.log('[handleShowdown] All players before pot calculation:', JSON.stringify(allPlayers.map((p: any) => ({
+      id: p.id,
+      chips: p.chips,
+      total_bet: p.total_bet,
+      current_bet: p.current_bet,
+      status: p.status
+    })), null, 2));
+    
     const playerBets: PlayerBet[] = allPlayers.map((p: any) => ({
       playerId: p.id,
       bet: p.totalBet || p.total_bet || 0,
       status: p.status
     }));
     
+    console.log('[handleShowdown] Player bets for pot calculation:', JSON.stringify(playerBets, null, 2));
+    
     const pots = calculatePots(playerBets);
     console.log('[handleShowdown] Calculated pots:', JSON.stringify(pots));
+    
+    const totalPot = pots.reduce((sum, pot) => sum + pot.amount, 0);
+    const totalBet = playerBets.reduce((sum, p) => sum + p.bet, 0);
+    console.log(`[handleShowdown] Total pot: ${totalPot}, Total bet: ${totalBet}, Difference: ${totalBet - totalPot}`);
     
     // Store side pots in database
     await client.query(
