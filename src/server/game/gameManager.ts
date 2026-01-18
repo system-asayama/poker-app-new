@@ -244,10 +244,11 @@ export class GameManager {
           break;
       }
       
-      // Update player
+      // Update player (including total_bet for pot calculation)
+      const betIncrease = newPlayerBet - player.currentBet;
       await client.query(
-        'UPDATE game_players SET chips = $1, current_bet = $2, status = $3 WHERE id = $4',
-        [newPlayerChips, newPlayerBet, newStatus, playerId]
+        'UPDATE game_players SET chips = $1, current_bet = $2, total_bet = total_bet + $3, status = $4 WHERE id = $5',
+        [newPlayerChips, newPlayerBet, betIncrease, newStatus, playerId]
       );
       
       // Record action
@@ -512,7 +513,7 @@ export class GameManager {
     // Calculate side pots based on player bets
     const playerBets: PlayerBet[] = allPlayers.map((p: any) => ({
       playerId: p.id,
-      bet: p.currentBet,
+      bet: p.totalBet || p.total_bet || 0,
       status: p.status
     }));
     
@@ -759,7 +760,7 @@ export class GameManager {
     
     // Reset all active players
     await client.query(
-      "UPDATE game_players SET current_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
+      "UPDATE game_players SET current_bet = 0, total_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
       [gameId]
     );
     
@@ -811,12 +812,12 @@ export class GameManager {
     const bigBlind = gameInfo.rows[0].big_blind;
     
     await client.query(
-      'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
+      'UPDATE game_players SET chips = chips - $1, current_bet = $1, total_bet = $1 WHERE id = $2',
       [smallBlind, smallBlindPlayer.id]
     );
     
     await client.query(
-      'UPDATE game_players SET chips = chips - $1, current_bet = $1 WHERE id = $2',
+      'UPDATE game_players SET chips = chips - $1, current_bet = $1, total_bet = $1 WHERE id = $2',
       [bigBlind, bigBlindPlayer.id]
     );
     
@@ -1080,6 +1081,7 @@ export class GameManager {
       gameId: row.game_id,
       userId: row.user_id,
       currentBet: row.current_bet,
+      totalBet: row.total_bet || 0,
       holeCards: Array.isArray(row.hole_cards) ? row.hole_cards : [],
       isDealer: row.is_dealer,
       isAi: row.is_ai,

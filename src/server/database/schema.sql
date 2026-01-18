@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS game_players (
   position INTEGER NOT NULL,
   chips INTEGER NOT NULL,
   current_bet INTEGER DEFAULT 0,
+  total_bet INTEGER DEFAULT 0,
   hole_cards JSONB DEFAULT '[]',
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'folded', 'allin', 'out')),
   is_dealer BOOLEAN DEFAULT FALSE,
