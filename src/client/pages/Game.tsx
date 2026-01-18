@@ -39,9 +39,14 @@ export function Game() {
   async function loadGameState() {
     try {
       const data = await api.getGameState(gameId);
-      setGame(data.game);
-      setPlayers(data.players);
-      setActions(data.actions);
+      // Handle 304 or empty response
+      if (data && data.game) {
+        setGame(data.game);
+        setPlayers(data.players);
+        setActions(data.actions);
+      } else {
+        console.warn('Received empty game state (possibly 304), keeping current state');
+      }
     } catch (error) {
       console.error('Failed to load game state:', error);
     } finally {

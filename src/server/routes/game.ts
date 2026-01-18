@@ -123,6 +123,11 @@ router.post('/:gameId/action', authenticateToken, async (req: AuthRequest, res) 
 
 // Get game state
 router.get('/:gameId', authenticateToken, async (req: AuthRequest, res) => {
+  // Prevent caching to avoid 304 responses
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  
   try {
     const gameId = parseInt(req.params.gameId);
     

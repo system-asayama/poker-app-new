@@ -22,6 +22,12 @@ async function fetchAPI(endpoint: string, options: FetchOptions = {}) {
   
   const response = await fetch(`${API_URL}${endpoint}`, config);
   
+  // Handle 304 Not Modified - return empty object or cached data
+  if (response.status === 304) {
+    console.warn(`API returned 304 for ${endpoint} - using cached data`);
+    return {};
+  }
+  
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(error.error || 'Request failed');
