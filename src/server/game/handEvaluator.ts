@@ -76,19 +76,28 @@ function evaluateFiveCards(cards: Card[]): HandResult {
   
   // Four of a Kind
   if (rankCounts.some(c => c.count === 4)) {
+    const quadRank = rankCounts.find(c => c.count === 4)!.rank;
+    const quadCards = sortedCards.filter(c => c.rank === quadRank);
+    const kickers = sortedCards.filter(c => c.rank !== quadRank);
+    const orderedCards = [...quadCards, ...kickers];
     return {
       rank: 'four_of_a_kind',
       cards: sortedCards,
-      value: handRankValues.four_of_a_kind * 1000000 + getHighCardValue(sortedCards),
+      value: handRankValues.four_of_a_kind * 1000000 + getHighCardValue(orderedCards),
     };
   }
   
   // Full House
   if (rankCounts.some(c => c.count === 3) && rankCounts.some(c => c.count === 2)) {
+    const tripleRank = rankCounts.find(c => c.count === 3)!.rank;
+    const pairRank = rankCounts.find(c => c.count === 2)!.rank;
+    const tripleCards = sortedCards.filter(c => c.rank === tripleRank);
+    const pairCards = sortedCards.filter(c => c.rank === pairRank);
+    const orderedCards = [...tripleCards, ...pairCards];
     return {
       rank: 'full_house',
       cards: sortedCards,
-      value: handRankValues.full_house * 1000000 + getHighCardValue(sortedCards),
+      value: handRankValues.full_house * 1000000 + getHighCardValue(orderedCards),
     };
   }
   
@@ -112,28 +121,41 @@ function evaluateFiveCards(cards: Card[]): HandResult {
   
   // Three of a Kind
   if (rankCounts.some(c => c.count === 3)) {
+    const tripleRank = rankCounts.find(c => c.count === 3)!.rank;
+    const tripleCards = sortedCards.filter(c => c.rank === tripleRank);
+    const kickers = sortedCards.filter(c => c.rank !== tripleRank);
+    const orderedCards = [...tripleCards, ...kickers];
     return {
       rank: 'three_of_a_kind',
       cards: sortedCards,
-      value: handRankValues.three_of_a_kind * 1000000 + getHighCardValue(sortedCards),
+      value: handRankValues.three_of_a_kind * 1000000 + getHighCardValue(orderedCards),
     };
   }
   
   // Two Pair
   if (rankCounts.filter(c => c.count === 2).length === 2) {
+    const pairRanks = rankCounts.filter(c => c.count === 2).map(c => c.rank);
+    const pairCards = sortedCards.filter(c => pairRanks.includes(c.rank))
+      .sort((a, b) => rankValues[b.rank] - rankValues[a.rank]);
+    const kickers = sortedCards.filter(c => !pairRanks.includes(c.rank));
+    const orderedCards = [...pairCards, ...kickers];
     return {
       rank: 'two_pair',
       cards: sortedCards,
-      value: handRankValues.two_pair * 1000000 + getHighCardValue(sortedCards),
+      value: handRankValues.two_pair * 1000000 + getHighCardValue(orderedCards),
     };
   }
   
   // One Pair
   if (rankCounts.some(c => c.count === 2)) {
+    const pairRank = rankCounts.find(c => c.count === 2)!.rank;
+    const pairCards = sortedCards.filter(c => c.rank === pairRank);
+    const kickers = sortedCards.filter(c => c.rank !== pairRank);
+    const orderedCards = [...pairCards, ...kickers];
     return {
       rank: 'one_pair',
       cards: sortedCards,
-      value: handRankValues.one_pair * 1000000 + getHighCardValue(sortedCards),
+      value: handRankValues.one_pair * 1000000 + getHighCardValue(orderedCards),
     };
   }
   
