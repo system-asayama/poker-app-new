@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './database/db.js';
+import { runMigrations } from './database/migrate.js';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import usersRoutes from './routes/users.js';
@@ -83,6 +84,9 @@ async function startServer() {
   try {
     await initializeDatabase();
     console.log('✅ Database initialized');
+    
+    await runMigrations();
+    console.log('✅ Database migrations completed');
     
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
