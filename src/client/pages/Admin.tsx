@@ -210,11 +210,15 @@ export function Admin() {
                       const evaluation = gameState.handEvaluations?.find(e => e.playerId === player.id);
                       const isPredictedWinner = gameState.predictedWinners?.includes(player.id);
                       
+                      const isOut = player.status === 'out';
+                      
                       return (
                         <div
                           key={player.id}
                           className={`bg-gray-700 rounded-lg p-4 ${
                             isPredictedWinner ? 'ring-4 ring-yellow-400' : ''
+                          } ${
+                            isOut ? 'opacity-50 bg-gray-900' : ''
                           }`}
                         >
                           <div className="flex justify-between items-start mb-3">
@@ -232,7 +236,7 @@ export function Admin() {
                                 ベット: {player.currentBet.toLocaleString()} | 
                                 ステータス: {player.status}
                               </div>
-                              {evaluation && player.status !== 'folded' && (
+                              {evaluation && player.status !== 'folded' && player.status !== 'out' && (
                                 <div className="mt-2">
                                   <div className="text-sm font-semibold text-poker-gold">
                                     成立役: {evaluation.handRankJapanese}
@@ -247,11 +251,20 @@ export function Admin() {
                                   フォールド済み
                                 </div>
                               )}
+                              {player.status === 'out' && (
+                                <div className="mt-2 text-sm text-gray-500 font-semibold">
+                                  💀 チップ切れ（除外済み）
+                                </div>
+                              )}
                             </div>
                             <div className="flex gap-2">
-                              {player.holeCards.map((card, i) => (
-                                <Card key={i} card={card} className="w-16" />
-                              ))}
+                              {isOut ? (
+                                <div className="text-gray-600 text-sm italic">カードなし</div>
+                              ) : (
+                                player.holeCards.map((card, i) => (
+                                  <Card key={i} card={card} className="w-16" />
+                                ))
+                              )}
                             </div>
                           </div>
                         </div>
