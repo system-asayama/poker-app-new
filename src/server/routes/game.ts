@@ -287,7 +287,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       let currentHand = null;
       if (holeCards.length === 2 && communityCards.length > 0) {
         try {
-          const { evaluateHand } = require('../game/handEvaluator');
+          const { evaluateHand } = require('../game/handEvaluator.js');
           currentHand = evaluateHand(holeCards, communityCards);
         } catch (error) {
           console.error('Error evaluating current hand:', error);
@@ -298,7 +298,7 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       let finalHand = null;
       if (holeCards.length === 2 && deck.length > 0) {
         try {
-          const { evaluateHand } = require('../game/handEvaluator');
+          const { evaluateHand } = require('../game/handEvaluator.js');
           
           // Build final community cards (current + remaining from deck)
           const cardsNeeded = 5 - communityCards.length;
