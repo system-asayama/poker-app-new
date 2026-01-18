@@ -470,6 +470,17 @@ export class GameManager {
       deck = remainingDeck;
     }
     
+    // Add current bets to pot before resetting
+    const sumBetsResult = await client.query(
+      'SELECT SUM(current_bet) as sum_bets FROM game_players WHERE game_id = $1',
+      [gameId]
+    );
+    const sumBets = parseInt(sumBetsResult.rows[0].sum_bets) || 0;
+    await client.query(
+      'UPDATE games SET pot = pot + $1 WHERE id = $2',
+      [sumBets, gameId]
+    );
+    
     // Reset bets
     await client.query('UPDATE game_players SET current_bet = 0 WHERE game_id = $1', [gameId]);
     
