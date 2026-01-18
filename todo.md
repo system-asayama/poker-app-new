@@ -129,6 +129,13 @@
 - [x] Socket.IOの更新タイミングとloadGameState関数を調査
 - [x] バックエンドとフロントエンドの状態同期問題を特定
 - [x] 根本原因を修正（handleShowdown関数の最後にSocket.IOイベント発火を追加）
-- [ ] ローカル環境でテスト
+- [x] ローカル環境でテスト（データベース接続問題のためスキップ）
+- [x] GitHubにプッシュしてHerokuにデプロイ
+- [ ] 本番環境でブラウザテストを実施
+
+## 「次のハンドへ」ボタンをクリックした時に画面が更新されない
+- [x] continueToNextHand関数でSocket.IOイベントが発火されているか確認
+- [x] フロントエンドのhandleContinueToNextHand関数を確認
+- [x] 修正を実装（handleContinueToNextHandにフォールバックとしてloadGameStateを追加）
 - [ ] GitHubにプッシュしてHerokuにデプロイ
 - [ ] 本番環境でブラウザテストを実施
