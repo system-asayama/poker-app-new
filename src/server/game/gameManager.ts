@@ -112,7 +112,7 @@ export class GameManager {
         }
         
         await client.query(
-          'UPDATE game_players SET hole_cards = $1, chips = $2, current_bet = $3 WHERE id = $4',
+          'UPDATE game_players SET hole_cards = $1, chips = $2, current_bet = $3, total_bet = $3 WHERE id = $4',
           [JSON.stringify(holeCards), newChips, newCurrentBet, player.id]
         );
       }
