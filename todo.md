@@ -159,5 +159,11 @@
 - [x] handleShowdown関数を修正: foldedプレイヤーのベットを正しく集計
 - [x] 不変条件チェックを追加: sumChipsAfter = sumChipsBefore + refundTotal + distributedTotal - sumTotalBet
 - [x] ログ出力を追加: sumChipsBefore, sumChipsAfter, sumTotalBet, refundTotal, distributedTotal
-- [ ] GitHubにプッシュしてHerokuにデプロイ
-- [ ] 本番環境でブラウザテストを実施
+- [x] GitHubにプッシュしてHerokuにデプロイ
+- [x] 本番環境でブラウザテストを実施
+
+## ショーダウン時にチップが配分されない（ポットが0にになる）バグ
+- [x] スクリーンショットとログを分析して根本原因を特定: startNextHandでtotal_betがリセットされる問題
+- [x] ポット計算とチップ配分のロジックを修正: total_betのリセットをhandleShowdownに移動
+- [ ] 修正をGitHubにプッシュしてHerokuにデプロイ
+- [ ] 実際のゲームで修正を検証

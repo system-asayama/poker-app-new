@@ -648,6 +648,13 @@ export class GameManager {
       console.log(`[handleShowdown] Invariant check PASSED ✓`);
     }
     
+    // Reset total_bet for all players after showdown (before next hand)
+    await client.query(
+      'UPDATE game_players SET total_bet = 0 WHERE game_id = $1',
+      [gameId]
+    );
+    console.log('[handleShowdown] Reset total_bet for all players');
+    
     // Save winner information
     await client.query(
       'UPDATE games SET current_phase = $1, current_turn = NULL, winners = $2, pot = 0 WHERE id = $3',
@@ -897,9 +904,9 @@ export class GameManager {
       return;
     }
     
-    // Reset all active players
+    // Reset all active players (but NOT total_bet yet - that will be reset after showdown)
     await client.query(
-      "UPDATE game_players SET current_bet = 0, total_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
+      "UPDATE game_players SET current_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
       [gameId]
     );
     
