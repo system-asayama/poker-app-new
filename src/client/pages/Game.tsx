@@ -58,10 +58,12 @@ export function Game() {
   
   async function loadHandAnalysis() {
     try {
+      console.log('[HandAnalysis] Loading analysis for game:', gameId);
       const analysis = await api.getHandAnalysis(gameId);
+      console.log('[HandAnalysis] Received analysis:', analysis);
       setHandAnalysis(analysis);
     } catch (error) {
-      console.error('Failed to load hand analysis:', error);
+      console.error('[HandAnalysis] Failed to load hand analysis:', error);
     }
   }
   
@@ -270,7 +272,10 @@ export function Game() {
             </div>
             
             {/* Hand Analysis Panel */}
-            {currentPlayer && game.status === 'playing' && handAnalysis && (
+            {(() => {
+              console.log('[HandAnalysis] Display check:', { currentPlayer: !!currentPlayer, status: game.status, handAnalysis: !!handAnalysis });
+              return currentPlayer && game.status === 'playing' && handAnalysis;
+            })() && (
               <div className="bg-gray-800 rounded-2xl p-6 mb-4">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-bold text-poker-gold">📊 ハンド分析</h3>
