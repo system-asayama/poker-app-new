@@ -294,8 +294,17 @@ export class GameManager {
           [gameId]
         );
         
+        await client.query('COMMIT');
+        
+        // Emit game update via Socket.IO
+        if (this.io) {
+          this.io.to(`game-${gameId}`).emit('game-update', { gameId });
+          console.log(`[Socket.IO] Emitted game-update for game ${gameId}`);
+        }
+        
         // Check if game should end (handled by continueToNextHand)
-        await this.checkAndStartNextHand(gameId, client);
+        // Note: This starts a new transaction internally
+        await this.checkAndStartNextHand(gameId, null as any);
       } else {
         // Move to next player
         const nextTurn = await this.getNextPlayer(gameId, playerId);
@@ -713,44 +722,72 @@ export class GameManager {
   }
   
   private async checkAndStartNextHand(gameId: number, client: any): Promise<void> {
-    // Get game info
-    const gameResult = await client.query('SELECT max_hands, current_hand FROM games WHERE id = $1', [gameId]);
-    const game = gameResult.rows[0];
-    
-    // Remove players with 0 chips
-    await client.query(
-      "UPDATE game_players SET status = 'out' WHERE game_id = $1 AND chips = 0",
-      [gameId]
-    );
-    
-    // Check how many players are still in
-    const activePlayers = await client.query(
-      "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status != 'out'",
-      [gameId]
-    );
-    
-    const playerCount = parseInt(activePlayers.rows[0].count);
-    
-    // If only 1 player left, end game
-    if (playerCount <= 1) {
-      await client.query(
-        "UPDATE games SET status = 'finished' WHERE id = $1",
-        [gameId]
-      );
-      return;
+    // If client is null, create a new transaction
+    const needsOwnTransaction = !client;
+    if (needsOwnTransaction) {
+      client = await getClient();
+      await client.query('BEGIN');
     }
     
-    // Check if we've reached max hands
-    if (game.max_hands && game.current_hand >= game.max_hands) {
+    try {
+      // Get game info
+      const gameResult = await client.query('SELECT max_hands, current_hand FROM games WHERE id = $1', [gameId]);
+      const game = gameResult.rows[0];
+      
+      // Remove players with 0 chips
       await client.query(
-        "UPDATE games SET status = 'finished' WHERE id = $1",
+        "UPDATE game_players SET status = 'out' WHERE game_id = $1 AND chips = 0",
         [gameId]
       );
-      return;
+      
+      // Check how many players are still in
+      const activePlayers = await client.query(
+        "SELECT COUNT(*) as count FROM game_players WHERE game_id = $1 AND status != 'out'",
+        [gameId]
+      );
+      
+      const playerCount = parseInt(activePlayers.rows[0].count);
+      
+      // If only 1 player left, end game
+      if (playerCount <= 1) {
+        await client.query(
+          "UPDATE games SET status = 'finished' WHERE id = $1",
+          [gameId]
+        );
+        if (needsOwnTransaction) {
+          await client.query('COMMIT');
+        }
+        return;
+      }
+      
+      // Check if we've reached max hands
+      if (game.max_hands && game.current_hand >= game.max_hands) {
+        await client.query(
+          "UPDATE games SET status = 'finished' WHERE id = $1",
+          [gameId]
+        );
+        if (needsOwnTransaction) {
+          await client.query('COMMIT');
+        }
+        return;
+      }
+      
+      // Start next hand
+      await this.startNextHand(gameId, client);
+      
+      if (needsOwnTransaction) {
+        await client.query('COMMIT');
+      }
+    } catch (error) {
+      if (needsOwnTransaction) {
+        await client.query('ROLLBACK');
+      }
+      throw error;
+    } finally {
+      if (needsOwnTransaction) {
+        client.release();
+      }
     }
-    
-    // Start next hand
-    await this.startNextHand(gameId, client);
   }
   
   private async startNextHand(gameId: number, client: any): Promise<void> {
