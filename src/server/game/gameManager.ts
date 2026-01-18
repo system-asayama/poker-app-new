@@ -789,7 +789,7 @@ export class GameManager {
     
     // Move dealer position
     const gameResult = await client.query('SELECT dealer_position FROM games WHERE id = $1', [gameId]);
-    const currentDealer = gameResult.rows[0].dealer_position;
+    const currentDealerPosition = gameResult.rows[0].dealer_position;
     
     const playersResult = await client.query(
       "SELECT * FROM game_players WHERE game_id = $1 AND status != 'out' ORDER BY position",
@@ -797,8 +797,9 @@ export class GameManager {
     );
     const players = playersResult.rows;
     
-    // Find next dealer
-    let nextDealerIndex = (currentDealer + 1) % players.length;
+    // Find next dealer by position (not index)
+    const currentDealerIndex = players.findIndex((p: any) => p.position === currentDealerPosition);
+    const nextDealerIndex = (currentDealerIndex + 1) % players.length;
     const nextDealer = players[nextDealerIndex].position;
     
     // Create new deck and shuffle
