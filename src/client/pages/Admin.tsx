@@ -4,7 +4,7 @@ import { useLocation } from 'wouter';
 import { api } from '../utils/api';
 import { socketClient } from '../utils/socket';
 import { Card } from '../components/Card';
-import { Game as GameType, GamePlayer, Card as CardType } from '@shared/types';
+import { Game as GameType, GamePlayer, Card as CardType, HandRank } from '@shared/types';
 
 export function Admin() {
   const { user } = useAuth();
@@ -15,6 +15,13 @@ export function Admin() {
     game: GameType;
     players: GamePlayer[];
     actions: any[];
+    handEvaluations?: {
+      playerId: number;
+      handRank: HandRank;
+      handRankJapanese: string;
+      value: number;
+    }[];
+    predictedWinners?: number[];
   } | null>(null);
   
   useEffect(() => {
@@ -193,35 +200,63 @@ export function Admin() {
                   </div>
                 )}
                 
-                {/* All Players' Hole Cards */}
+                {/* All Players' Hole Cards with Hand Evaluation */}
                 <div className="bg-gray-800 rounded-2xl p-6">
                   <h3 className="text-xl font-bold mb-4">
-                    全プレイヤーのホールカード
+                    全プレイヤーのホールカードと成立役
                   </h3>
                   <div className="space-y-4">
-                    {gameState.players.map((player) => (
-                      <div
-                        key={player.id}
-                        className="bg-gray-700 rounded-lg p-4 flex justify-between items-center"
-                      >
-                        <div className="flex-1">
-                          <div className="font-bold text-lg mb-1">
-                            {player.user?.username}
-                            {player.isDealer && ' 🎯'}
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            チップ: {player.chips.toLocaleString()} | 
-                            ベット: {player.currentBet.toLocaleString()} | 
-                            ステータス: {player.status}
+                    {gameState.players.map((player) => {
+                      const evaluation = gameState.handEvaluations?.find(e => e.playerId === player.id);
+                      const isPredictedWinner = gameState.predictedWinners?.includes(player.id);
+                      
+                      return (
+                        <div
+                          key={player.id}
+                          className={`bg-gray-700 rounded-lg p-4 ${
+                            isPredictedWinner ? 'ring-4 ring-yellow-400' : ''
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex-1">
+                              <div className="font-bold text-lg mb-1 flex items-center gap-2">
+                                {player.isAi && <span className="text-blue-400">🤖</span>}
+                                {player.isAi ? player.aiName : player.user?.username}
+                                {player.isDealer && ' 🎯'}
+                                {isPredictedWinner && (
+                                  <span className="text-yellow-400 text-sm">👑 勝利予測</span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                チップ: {player.chips.toLocaleString()} | 
+                                ベット: {player.currentBet.toLocaleString()} | 
+                                ステータス: {player.status}
+                              </div>
+                              {evaluation && player.status !== 'folded' && (
+                                <div className="mt-2">
+                                  <div className="text-sm font-semibold text-poker-gold">
+                                    成立役: {evaluation.handRankJapanese}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    評価値: {evaluation.value.toLocaleString()}
+                                  </div>
+                                </div>
+                              )}
+                              {player.status === 'folded' && (
+                                <div className="mt-2 text-sm text-red-400">
+                                  フォールド済み
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              {player.holeCards.map((card, i) => (
+                                <Card key={i} card={card} className="w-16" />
+                              ))}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          {player.holeCards.map((card, i) => (
-                            <Card key={i} card={card} className="w-16" />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
                 

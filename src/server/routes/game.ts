@@ -2,8 +2,27 @@ import express from 'express';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { gameManager } from '../game/gameManager.js';
 import { query } from '../database/db.js';
+import { evaluateHand, compareHands } from '../game/handEvaluator.js';
+import { Card, HandRank } from '../../shared/types.js';
 
 const router = express.Router();
+
+// Helper function to convert hand rank to Japanese
+function getHandRankJapanese(rank: HandRank): string {
+  const rankMap: Record<HandRank, string> = {
+    'royal_flush': 'ロイヤルフラッシュ',
+    'straight_flush': 'ストレートフラッシュ',
+    'four_of_a_kind': 'フォーカード',
+    'full_house': 'フルハウス',
+    'flush': 'フラッシュ',
+    'straight': 'ストレート',
+    'three_of_a_kind': 'スリーカード',
+    'two_pair': 'ツーペア',
+    'one_pair': 'ワンペア',
+    'high_card': 'ハイカード',
+  };
+  return rankMap[rank] || rank;
+}
 
 // Create game
 router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
@@ -308,7 +327,34 @@ router.get('/:gameId/admin', authenticateToken, requireAdmin, async (req: AuthRe
       createdAt: new Date(a.created_at),
     }));
     
-    res.json({ game, players, actions });
+    // Evaluate hands for all active players
+    const handEvaluations: any[] = [];
+    const predictedWinners: number[] = [];
+    
+    if (game.community_cards && game.community_cards.length >= 3) {
+      const communityCards = game.community_cards as Card[];
+      
+      // Evaluate each player's hand
+      for (const player of players) {
+        if (player.status !== 'folded' && player.holeCards.length === 2) {
+          const handResult = evaluateHand(player.holeCards as Card[], communityCards);
+          handEvaluations.push({
+            playerId: player.id,
+            handRank: handResult.rank,
+            handRankJapanese: getHandRankJapanese(handResult.rank),
+            value: handResult.value,
+          });
+        }
+      }
+      
+      // Find predicted winner(s)
+      if (handEvaluations.length > 0) {
+        const maxValue = Math.max(...handEvaluations.map(e => e.value));
+        predictedWinners.push(...handEvaluations.filter(e => e.value === maxValue).map(e => e.playerId));
+      }
+    }
+    
+    res.json({ game, players, actions, handEvaluations, predictedWinners });
   } catch (error) {
     console.error('Get admin game state error:', error);
     res.status(500).json({ error: 'Failed to get admin game state' });
