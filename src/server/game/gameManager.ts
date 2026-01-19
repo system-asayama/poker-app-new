@@ -1257,6 +1257,9 @@ export class GameManager {
       isAi: row.is_ai,
       aiDifficulty: row.ai_difficulty,
       aiName: row.ai_name,
+      handStartChips: row.hand_start_chips || 0,
+      handBetAmount: row.hand_bet_amount || 0,
+      handWonAmount: row.hand_won_amount || 0,
     };
   }
   
