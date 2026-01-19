@@ -201,14 +201,14 @@ export class GameManager {
           // If call amount exceeds chips, automatically convert to all-in
           if (callAmount >= player.chips) {
             const betIncrease_call = player.chips;
-            newPot += betIncrease_call;
+            // Don't add to pot yet - will be added at round end
             newPlayerBet += betIncrease_call;
             newPlayerChips = 0;
             newStatus = 'allin';
           } else {
             newPlayerChips -= callAmount;
             newPlayerBet += callAmount;
-            newPot += callAmount;
+            // Don't add to pot yet - will be added at round end
             // If chips become 0, mark as all-in
             if (newPlayerChips === 0) {
               newStatus = 'allin';
@@ -233,14 +233,14 @@ export class GameManager {
           // If total needed exceeds chips, convert to all-in
           if (totalNeeded >= player.chips) {
             const betIncrease_raise = player.chips;
-            newPot += betIncrease_raise;
+            // Don't add to pot yet - will be added at round end
             newPlayerBet += betIncrease_raise;
             newPlayerChips = 0;
             newStatus = 'allin';
           } else {
             newPlayerChips -= totalNeeded;
             newPlayerBet += totalNeeded;
-            newPot += totalNeeded;
+            // Don't add to pot yet - will be added at round end
             // If chips become 0, mark as all-in
             if (newPlayerChips === 0) {
               newStatus = 'allin';
@@ -250,7 +250,7 @@ export class GameManager {
           
         case 'allin':
           const betIncrease_allin = player.chips;
-          newPot += betIncrease_allin;
+          // Don't add to pot yet - will be added at round end
           newPlayerBet += betIncrease_allin;
           newPlayerChips = 0;
           newStatus = 'allin';
@@ -270,8 +270,7 @@ export class GameManager {
         [gameId, playerId, action, amount, game.currentPhase]
       );
       
-      // Update pot
-      await client.query('UPDATE games SET pot = $1 WHERE id = $2', [newPot, gameId]);
+      // Note: pot is NOT updated here - current_bet will be moved to pot at round end
       
       // Invariant check: sumChips + sumCurrentBet + pot should equal initial total
       const checkResult = await client.query(
@@ -290,7 +289,7 @@ export class GameManager {
       const activeCount = parseInt(activePlayers.rows[0].count);
       
       if (activeCount <= 1) {
-        // Hand over - award pot to winner
+        // Hand over - award pot + all current_bet to winner
         const winnerResult = await client.query(
           "SELECT id, chips FROM game_players WHERE game_id = $1 AND status IN ('active', 'allin') LIMIT 1",
           [gameId]
@@ -298,15 +297,19 @@ export class GameManager {
         
         if (winnerResult.rows.length > 0) {
           const winner = winnerResult.rows[0];
+          
+          // Calculate total pot: existing pot + all current_bet
+          const totalPot = game.pot + sumBets;
+          
           await client.query(
             'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
-            [newPot, winner.id]
+            [totalPot, winner.id]
           );
           
           // Store winner info
           await client.query(
             "UPDATE games SET winners = $1 WHERE id = $2",
-            [JSON.stringify([{ playerId: winner.id, amount: newPot }]), gameId]
+            [JSON.stringify([{ playerId: winner.id, amount: totalPot }]), gameId]
           );
         }
         
@@ -476,7 +479,18 @@ export class GameManager {
       deck = remainingDeck;
     }
     
-    // Reset bets (pot already contains all bets from performAction)
+    // Move all current_bet to pot, then reset current_bet
+    const betsResult = await client.query(
+      'SELECT SUM(current_bet) as total_bets FROM game_players WHERE game_id = $1',
+      [gameId]
+    );
+    const totalBets = parseInt(betsResult.rows[0].total_bets) || 0;
+    
+    await client.query(
+      'UPDATE games SET pot = pot + $1 WHERE id = $2',
+      [totalBets, gameId]
+    );
+    
     await client.query('UPDATE game_players SET current_bet = 0 WHERE game_id = $1', [gameId]);
     
     // Get first active player (only status='active', not 'allin')
