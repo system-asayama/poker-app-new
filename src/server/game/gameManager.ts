@@ -310,15 +310,15 @@ export class GameManager {
           );
         }
         
-        // Reset current_bet and total_bet for all players before moving to showdown
+        // Move to showdown phase and reset pot (hand complete, but game may continue)
         await client.query(
-          'UPDATE game_players SET current_bet = 0, total_bet = 0 WHERE game_id = $1',
+          "UPDATE games SET current_phase = 'showdown', pot = 0, current_turn = NULL WHERE id = $1",
           [gameId]
         );
         
-        // Move to showdown phase (hand complete, but game may continue)
+        // Reset current_bet and total_bet for all players AFTER awarding pot
         await client.query(
-          "UPDATE games SET current_phase = 'showdown', pot = 0, current_turn = NULL WHERE id = $1",
+          'UPDATE game_players SET current_bet = 0, total_bet = 0 WHERE game_id = $1',
           [gameId]
         );
         
