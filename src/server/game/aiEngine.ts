@@ -103,16 +103,16 @@ export class AIEngine {
   private easyStrategy(gameState: GameState, handStrength: number): { action: string; amount: number } {
     const callAmount = gameState.currentBet - gameState.playerBet;
     
-    // Very weak hand (< 0.3): mostly fold
-    if (handStrength < 0.3) {
+    // Very weak hand (< 0.25): mostly fold
+    if (handStrength < 0.25) {
       if (callAmount === 0) return { action: 'check', amount: 0 };
-      return Math.random() < 0.2 ? { action: 'call', amount: callAmount } : { action: 'fold', amount: 0 };
+      return Math.random() < 0.4 ? { action: 'call', amount: callAmount } : { action: 'fold', amount: 0 };
     }
     
-    // Medium hand (0.3-0.6): call or check
+    // Medium hand (0.25-0.6): call or check
     if (handStrength < 0.6) {
       if (callAmount === 0) return { action: 'check', amount: 0 };
-      return Math.random() < 0.6 ? { action: 'call', amount: callAmount } : { action: 'fold', amount: 0 };
+      return Math.random() < 0.8 ? { action: 'call', amount: callAmount } : { action: 'fold', amount: 0 };
     }
     
     // Strong hand (> 0.6): call or small raise
@@ -143,9 +143,9 @@ export class AIEngine {
     const potSize = gameState.pot;
     
     // Weak hand
-    if (handStrength < 0.4) {
+    if (handStrength < 0.35) {
       if (callAmount === 0) return { action: 'check', amount: 0 };
-      if (callAmount < potSize * 0.2 && handStrength > 0.25) {
+      if (callAmount < potSize * 0.3 && handStrength > 0.2) {
         return { action: 'call', amount: callAmount };
       }
       return { action: 'fold', amount: 0 };
@@ -197,7 +197,7 @@ export class AIEngine {
     const aggressionFactor = this.calculateAggression(handStrength, gameState.phase, gameState.playersRemaining);
     
     // Very weak hand
-    if (handStrength < 0.35) {
+    if (handStrength < 0.3) {
       if (callAmount === 0) {
         // Bluff occasionally in late position
         if (Math.random() < 0.15 && gameState.playersRemaining <= 3) {
@@ -211,11 +211,11 @@ export class AIEngine {
         return { action: 'check', amount: 0 };
       }
       // Fold to any significant bet
-      if (callAmount > potSize * 0.3) {
+      if (callAmount > potSize * 0.4) {
         return { action: 'fold', amount: 0 };
       }
       // Call small bets with pot odds
-      if (potOdds > 3 && handStrength > 0.25) {
+      if (potOdds > 2.5 && handStrength > 0.2) {
         return { action: 'call', amount: Math.min(callAmount, gameState.playerChips) };
       }
       return { action: 'fold', amount: 0 };
@@ -362,16 +362,19 @@ export class AIEngine {
       const isPair = holeRanks[0] === holeRanks[1];
       const isSuited = holeCards[0].suit === holeCards[1].suit;
       const isHighCards = holeRanks[0] >= 11 && holeRanks[1] >= 11;
+      const isMediumCards = holeRanks[0] >= 9 && holeRanks[1] >= 9;
       
       if (isPair && holeRanks[0] >= 10) return 0.85; // High pocket pair
       if (isPair) return 0.60 + (holeRanks[0] / 14) * 0.2; // Lower pocket pair
       if (isHighCards && isSuited) return 0.70;
       if (isHighCards) return 0.60;
-      if (isSuited) return 0.45 + highCardStrength * 0.15;
-      return 0.30 + highCardStrength * 0.15;
+      if (isMediumCards && isSuited) return 0.55;
+      if (isMediumCards) return 0.45;
+      if (isSuited) return 0.40 + highCardStrength * 0.15;
+      return 0.35 + highCardStrength * 0.15;
     }
     
-    return 0.30 + highCardStrength * 0.2;
+    return 0.35 + highCardStrength * 0.25;
   }
 
   // Calculate pot odds
