@@ -260,7 +260,7 @@ export class GameManager {
       // Update player (including total_bet for pot calculation)
       const betIncrease = newPlayerBet - player.currentBet;
       await client.query(
-        'UPDATE game_players SET chips = $1, current_bet = $2, total_bet = total_bet + $3, status = $4 WHERE id = $5',
+        'UPDATE game_players SET chips = $1, current_bet = $2, total_bet = total_bet + $3, hand_bet_amount = total_bet + $3, status = $4 WHERE id = $5',
         [newPlayerChips, newPlayerBet, betIncrease, newStatus, playerId]
       );
       
@@ -302,7 +302,7 @@ export class GameManager {
           const totalPot = game.pot + sumBets;
           
           await client.query(
-            'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
+            'UPDATE game_players SET chips = chips + $1, hand_won_amount = $1 WHERE id = $2',
             [totalPot, winner.id]
           );
           
@@ -601,7 +601,7 @@ export class GameManager {
     // Process refunds (uncalled bets)
     for (const [playerId, refundAmount] of refunds.entries()) {
       await client.query(
-        'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
+        'UPDATE game_players SET chips = chips + $1, hand_won_amount = hand_won_amount + $1 WHERE id = $2',
         [refundAmount, playerId]
       );
       console.log(`[handleShowdown] Refunded ${refundAmount} chips to player ${playerId}`);
@@ -633,7 +633,7 @@ export class GameManager {
       
       for (const winner of potWinners) {
         await client.query(
-          'UPDATE game_players SET chips = chips + $1 WHERE id = $2',
+          'UPDATE game_players SET chips = chips + $1, hand_won_amount = hand_won_amount + $1 WHERE id = $2',
           [winAmount, winner.player.id]
         );
         
@@ -925,8 +925,9 @@ export class GameManager {
     }
     
     // Reset all active players (but NOT total_bet yet - that will be reset after showdown)
+    // Record hand_start_chips for statistics
     await client.query(
-      "UPDATE game_players SET current_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active' WHERE game_id = $1 AND status != 'out'",
+      "UPDATE game_players SET current_bet = 0, hole_cards = '[]', hand_rank = NULL, hand_description = NULL, status = 'active', hand_start_chips = chips, hand_bet_amount = 0, hand_won_amount = 0 WHERE game_id = $1 AND status != 'out'",
       [gameId]
     );
     
@@ -979,12 +980,12 @@ export class GameManager {
     const bigBlind = gameInfo.rows[0].big_blind;
     
     await client.query(
-      'UPDATE game_players SET chips = chips - $1, current_bet = $1, total_bet = $1 WHERE id = $2',
+      'UPDATE game_players SET chips = chips - $1, current_bet = $1, total_bet = $1, hand_bet_amount = $1 WHERE id = $2',
       [smallBlind, smallBlindPlayer.id]
     );
     
     await client.query(
-      'UPDATE game_players SET chips = chips - $1, current_bet = $1, total_bet = $1 WHERE id = $2',
+      'UPDATE game_players SET chips = chips - $1, current_bet = $1, total_bet = $1, hand_bet_amount = $1 WHERE id = $2',
       [bigBlind, bigBlindPlayer.id]
     );
     

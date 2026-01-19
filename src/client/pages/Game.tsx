@@ -512,6 +512,16 @@ export function Game() {
                       {player.status === 'folded' && (
                         <div className="text-xs text-red-400 mt-1">フォールド</div>
                       )}
+                      
+                      {/* Hand Statistics */}
+                      <div className="mt-2 text-xs text-gray-500 space-y-1">
+                        <div>開始: {((player as any).handStartChips || (player as any).hand_start_chips || 0).toLocaleString()}</div>
+                        <div>ベット: {((player as any).handBetAmount || (player as any).hand_bet_amount || 0).toLocaleString()}</div>
+                        <div className={(((player as any).handWonAmount || (player as any).hand_won_amount || 0) > 0) ? "text-green-400" : ""}>
+                          獲得: {((player as any).handWonAmount || (player as any).hand_won_amount || 0).toLocaleString()}
+                        </div>
+                        <div className="font-bold">終了: {player.chips.toLocaleString()}</div>
+                      </div>
                     </div>
                     
                     {/* Player's Hole Cards */}
