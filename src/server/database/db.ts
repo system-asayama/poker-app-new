@@ -31,6 +31,15 @@ export async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS winners TEXT
     `);
     console.log('✅ Showdown migrations applied successfully');
+    
+    // Run migrations for hand statistics
+    await pool.query(`
+      ALTER TABLE game_players 
+      ADD COLUMN IF NOT EXISTS hand_start_chips INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS hand_bet_amount INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS hand_won_amount INTEGER DEFAULT 0
+    `);
+    console.log('✅ Hand statistics migrations applied successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
     throw error;
