@@ -187,5 +187,11 @@
 
 ## Invariant Checkの計算式バグ修正
 - [x] handleShowdown関数のInvariant Check計算式を修正
+- [x] 修正をGitHubにプッシュしてHerokuにデプロイ (commit 0cb5369)
+- [x] 本番環境でテストして修正を検証（Invariant check PASSED ✓）
+
+## チップが消失する問題（プレイヤーバスト時）
+- [ ] プレイヤーバスト時のチップ管理ロジックを調査
+- [ ] チップ消失の原因を特定して修正を実装
 - [ ] 修正をGitHubにプッシュしてHerokuにデプロイ
 - [ ] 本番環境でテストして修正を検証
