@@ -21,8 +21,8 @@ export function Home() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [invitedEmails, setInvitedEmails] = useState('');
   const [loading, setLoading] = useState(false);
-  const [addAI, setAddAI] = useState(false);
-  const [aiCount, setAiCount] = useState(1);
+  const [addAI, setAddAI] = useState(true);
+  const [aiCount, setAiCount] = useState(5);
   const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [maxHands, setMaxHands] = useState<number | null>(null);
   
