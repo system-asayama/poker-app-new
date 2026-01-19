@@ -637,13 +637,13 @@ export class GameManager {
     const refundTotal = Array.from(refunds.values()).reduce((sum, amount) => sum + amount, 0);
     
     console.log(`[handleShowdown] Invariant check AFTER: sumChipsAfter=${sumChipsAfter}, distributedTotal=${distributedTotal}, refundTotal=${refundTotal}`);
-    console.log(`[handleShowdown] Expected: sumChipsAfter = sumChipsBefore + distributedTotal + refundTotal - sumTotalBet`);
-    console.log(`[handleShowdown] Actual: ${sumChipsAfter} = ${sumChipsBefore} + ${distributedTotal} + ${refundTotal} - ${sumTotalBet}`);
-    console.log(`[handleShowdown] Calculated: ${sumChipsBefore + distributedTotal + refundTotal - sumTotalBet}`);
+    console.log(`[handleShowdown] Expected: sumChipsAfter = sumChipsBefore + distributedTotal + refundTotal`);
+    console.log(`[handleShowdown] Actual: ${sumChipsAfter} = ${sumChipsBefore} + ${distributedTotal} + ${refundTotal}`);
+    console.log(`[handleShowdown] Calculated: ${sumChipsBefore + distributedTotal + refundTotal}`);
     
-    if (sumChipsAfter !== sumChipsBefore + distributedTotal + refundTotal - sumTotalBet) {
+    if (sumChipsAfter !== sumChipsBefore + distributedTotal + refundTotal) {
       console.error(`[handleShowdown] INVARIANT VIOLATION: Chip count mismatch!`);
-      console.error(`[handleShowdown] Difference: ${sumChipsAfter - (sumChipsBefore + distributedTotal + refundTotal - sumTotalBet)}`);
+      console.error(`[handleShowdown] Difference: ${sumChipsAfter - (sumChipsBefore + distributedTotal + refundTotal)}`);
     } else {
       console.log(`[handleShowdown] Invariant check PASSED ✓`);
     }
